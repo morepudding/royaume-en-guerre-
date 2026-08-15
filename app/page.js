@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
+import { createImmersionAudio } from "./immersion-audio";
 
 const r = { Fragment, jsx, jsxs };
 const t = React;
@@ -649,6 +650,8 @@ export default function Game() {
     M = (0, t.useRef)(null),
     N = (0, t.useRef)(!1),
     L = (0, t.useRef)(0),
+    audioEngine = (0, t.useRef)(null),
+    battleFx = (0, t.useRef)({ shake: 0, flash: 0, color: "242,196,93" }),
     [P, A] = (0, t.useState)("campaign"),
     [E, I] = (0, t.useState)("playing"),
     [O, q] = (0, t.useState)(1),
@@ -695,10 +698,17 @@ export default function Game() {
     }, [$]),
     (0, t.useEffect)(() => {
       N.current = H;
+      audioEngine.current?.setMuted(H);
     }, [H]),
     (0, t.useEffect)(() => {
       L.current = Q;
-    }, [Q]));
+    }, [Q]),
+    (0, t.useEffect)(
+      () => () => {
+        audioEngine.current?.stop();
+      },
+      [],
+    ));
   let er = (0, t.useCallback)((e, r = 0.07, t = 0.035) => {
       if (!N.current)
         try {
@@ -719,6 +729,29 @@ export default function Game() {
     }, []),
     et = (0, t.useCallback)((e) => {
       (J(e), window.setTimeout(() => J((r) => (r === e ? null : r)), 1500));
+    }, []),
+    immersiveSound = (0, t.useCallback)((e) => {
+      if (N.current) return;
+      audioEngine.current ??= createImmersionAudio();
+      audioEngine.current.play(e);
+    }, []),
+    impactFeedback = (0, t.useCallback)((e, r, t, n = 1) => {
+      battleFx.current.shake = Math.max(battleFx.current.shake, 7 * n);
+      battleFx.current.flash = Math.max(battleFx.current.flash, 0.16 * n);
+      battleFx.current.color = t === l.orcs.main ? "232,93,72" : "242,196,93";
+      for (let s = 0; s < 9 + 5 * n; s++) {
+        let a = (Math.PI * 2 * s) / (9 + 5 * n) + Math.random() * 0.35;
+        f.current.push({
+          id: C.current++,
+          x: e,
+          y: r,
+          color: t,
+          kind: "spark",
+          vx: Math.cos(a) * (0.055 + Math.random() * 0.055) * n,
+          vy: Math.sin(a) * (0.08 + Math.random() * 0.05) * n,
+          age: 0,
+        });
+      }
     }, []),
     en = (e, r) => {
       let t = h.current;
@@ -781,6 +814,11 @@ export default function Game() {
           ((g.current = e),
           I(e),
           er("won" === e ? 880 : 130, 0.35, 0.06),
+          immersiveSound("won" === e ? "victory" : "defeat"),
+          (battleFx.current.shake = "won" === e ? 5 : 12),
+          (battleFx.current.flash = 0.65),
+          (battleFx.current.color = "won" === e ? "242,196,93" : "232,93,72"),
+          navigator.vibrate?.("won" === e ? [35, 45, 70] : [90, 40, 120]),
           "won" === e)
         ) {
           let e = h.current,
@@ -798,7 +836,7 @@ export default function Game() {
           });
         }
       },
-      [er],
+      [er, immersiveSound],
     ),
     el = (0, t.useCallback)(
       (e) => {
@@ -832,7 +870,9 @@ export default function Game() {
             time: 0,
           }),
           screen.orientation?.lock?.("landscape").catch(() => void 0),
-          er(440, 0.09, 0.025));
+          er(440, 0.09, 0.025),
+          (audioEngine.current ??= createImmersionAudio()),
+          audioEngine.current.startBattle(r.terrain, r.mode));
       },
       [er],
     ),
@@ -877,11 +917,14 @@ export default function Game() {
             text: `−${o}`,
             age: 0,
           }),
-          "humans" === t && (er(520, 0.055), navigator.vibrate?.(18)),
+          "humans" === t &&
+            (er(520, 0.055),
+            immersiveSound("launch"),
+            navigator.vibrate?.(18)),
           !0)
         );
       },
-      [er],
+      [er, immersiveSound],
     ),
     eo = (e) => {
       if ("fog" !== h.current.mode) return !0;
@@ -919,6 +962,12 @@ export default function Game() {
       y.current = e;
       let L = h.current,
         P = k.current;
+      let activeFx = battleFx.current;
+      activeFx.shake = Math.max(0, activeFx.shake - 22 * N);
+      activeFx.flash = Math.max(0, activeFx.flash - 1.9 * N);
+      r.style.transform = activeFx.shake
+        ? `translate3d(${(Math.random() - 0.5) * activeFx.shake}px, ${(Math.random() - 0.5) * activeFx.shake}px, 0)`
+        : "translate3d(0,0,0)";
       if ("battle" === p.current && "playing" === g.current) {
         for (let e of ((T.current += N),
         (S.current += N),
@@ -962,6 +1011,8 @@ export default function Game() {
             !P.sealsOpened &&
             ((P.sealsOpened = !0),
             (n.current[L.target || 1].invulnerable = !1),
+            immersiveSound("magic"),
+            (battleFx.current.flash = 0.45),
             et("Les sceaux sont brisés !")),
           "betrayal" === L.mode &&
             !P.betrayalDone &&
@@ -975,6 +1026,9 @@ export default function Game() {
               ((e.owner = "orcs"),
               (e.units = Math.max(16, e.units)),
               (P.lostHumanBase = !0),
+              immersiveSound("betrayal"),
+              impactFeedback(e.x, e.y, l.orcs.main, 1.5),
+              navigator.vibrate?.([70, 35, 100]),
               et("Trahison ! Une garnison se retourne")));
         }
         if (
@@ -987,8 +1041,13 @@ export default function Game() {
               .filter((e) => "humans" === e.owner)
               .reduce((e, r) => e + r.units, 0) >= (L.target || 120)
               ? ((n.current[0].units += 80),
+                immersiveSound("magic"),
+                impactFeedback(n.current[0].x, n.current[0].y, l.humans.main, 1.4),
                 et("L’Armée de l’Aube est arrivée !"))
-              : ((n.current[1].units += 90), et("La Horde déferle !"))),
+              : ((n.current[1].units += 90),
+                immersiveSound("wave"),
+                impactFeedback(n.current[1].x, n.current[1].y, l.orcs.main, 1.5),
+                et("La Horde déferle !"))),
           "defense" === L.mode && T.current >= P.nextWave)
         ) {
           for (let e of ((P.nextWave += 8),
@@ -1000,6 +1059,7 @@ export default function Game() {
             r.length &&
               ei(e.id, r[Math.floor(Math.random() * r.length)], "orcs", 0.45);
           }
+          (immersiveSound("wave"), navigator.vibrate?.([45, 25, 45]));
           et("Une nouvelle vague approche");
         }
         if (
@@ -1073,8 +1133,9 @@ export default function Game() {
                     text: "CHOC",
                     age: 0,
                   }),
-                  er(120, 0.11, 0.055),
-                  navigator.vibrate?.([22, 18, 35]),
+                  immersiveSound("clash"),
+                  impactFeedback(o, u, "#fff0c3", 1.25),
+                  navigator.vibrate?.([30, 18, 45]),
                   et("Les armées s’affrontent sur la route"));
               }
             }
@@ -1094,6 +1155,8 @@ export default function Game() {
               P.bridge >= (L.target || 40) &&
                 ((t.owner = "humans"),
                 (t.units = 5),
+                immersiveSound("repair"),
+                impactFeedback(t.x, t.y, l.humans.main, 1.25),
                 et("Le pont est réparé !")),
               e.add(r.id));
             continue;
@@ -1115,6 +1178,8 @@ export default function Game() {
                 text: "SAUVÉS",
                 age: 0,
               }),
+              immersiveSound("saved"),
+              impactFeedback(t.x, t.y, l.humans.main, 0.7),
               P.evacuated >= (L.target || 70) && ea("won"));
             continue;
           }
@@ -1128,6 +1193,8 @@ export default function Game() {
                 text: "IMMUNE",
                 age: 0,
               }),
+              immersiveSound("invalid"),
+              impactFeedback(t.x, t.y, l.orcs.main, 0.8),
               "humans" === r.owner && et("Cette position est protégée"));
             continue;
           }
@@ -1160,6 +1227,10 @@ export default function Game() {
             text: i ? "CAPTURÉE" : `−${r.units}`,
             age: 0,
           }),
+            s !== r.owner &&
+              (impactFeedback(t.x, t.y, l[r.owner].main, i ? 1.25 : 0.75),
+              immersiveSound(i && "humans" === r.owner ? "capture" : i ? "loss" : "impact"),
+              navigator.vibrate?.(i ? [25, 30, 55] : 15)),
             "humans" === r.owner &&
               i &&
               (er(780, 0.16, 0.05),
@@ -1197,6 +1268,9 @@ export default function Game() {
         }
         R.current > 0.25 &&
           ((R.current = 0),
+          audioEngine.current?.setIntensity(
+            Math.min(1, 0.18 + 0.08 * d.current.length + (T.current > 45 ? 0.12 : 0)),
+          ),
           Z({
             humans: n.current.filter((e) => "humans" === e.owner).length,
             orcs: n.current.filter((e) => "orcs" === e.owner).length,
@@ -1563,8 +1637,20 @@ export default function Game() {
       }
       for (let e of f.current) {
         let r = e.age / 0.9,
-          n = 24 + e.x * b,
-          s = 44 + e.y * M;
+          n = 24 + (e.x + (e.vx || 0) * e.age) * b,
+          s = 44 + (e.y + (e.vy || 0) * e.age + (e.kind === "spark" ? 0.09 * e.age * e.age : 0)) * M;
+        if (e.kind === "spark") {
+          (t.save(),
+            (t.globalAlpha = 1 - r),
+            (t.fillStyle = e.color),
+            (t.shadowColor = e.color),
+            (t.shadowBlur = 8),
+            t.beginPath(),
+            t.arc(n, s, 2.8 * (1 - r) + 0.6, 0, 7),
+            t.fill(),
+            t.restore());
+          continue;
+        }
         (t.save(),
           (t.globalAlpha = 1 - r),
           "CHOC" === e.text &&
@@ -1596,6 +1682,10 @@ export default function Game() {
             (t.textAlign = "center"),
             t.fillText(e.text, n, s - 34 - 24 * r)),
           t.restore());
+      }
+      if (activeFx.flash > 0) {
+        ((t.fillStyle = `rgba(${activeFx.color},${Math.min(0.2, activeFx.flash * 0.22)})`),
+          t.fillRect(0, 0, o, c));
       }
       s = requestAnimationFrame(u);
     };
@@ -1629,11 +1719,17 @@ export default function Game() {
         (j.current = null),
         null !== r && null !== t && r !== t)
       ) {
-        if (!en(r, t)) return void et("Aucune route directe");
+        if (!en(r, t))
+          return (
+            immersiveSound("invalid"),
+            navigator.vibrate?.(35),
+            void et("Aucune route directe")
+          );
         if (b.current && "humans" === n.current[t].owner) {
           let e = m.current.find((e) => e.from === r && e.to === t);
           e
             ? ((m.current = m.current.filter((r) => r !== e)),
+              immersiveSound("select"),
               et("Ravitaillement coupé"))
             : (m.current.push({
                 from: r,
@@ -1641,6 +1737,7 @@ export default function Game() {
                 owner: "humans",
                 clock: 0,
               }),
+              immersiveSound("magic"),
               et("Ravitaillement activé"));
           return;
         }
@@ -1732,6 +1829,7 @@ export default function Game() {
                 (e.currentTarget.setPointerCapture(e.pointerId),
                 (x.current = t.id),
                 (j.current = { x: r.x, y: r.y }),
+                immersiveSound("select"),
                 er(340, 0.035, 0.02));
             },
             onPointerMove: (e) => {
