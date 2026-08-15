@@ -17,6 +17,7 @@ This repository is the source of truth for **Royaume en Guerre**.
 ## Code map
 
 - `app/page.js`: mission data and complete game loop
+- `app/immersion-audio.js`: procedural music and action sound effects
 - `app/globals.css`: all game and responsive styles
 - `app/layout.tsx`: fonts, metadata and mobile viewport
 - `public/sw.js`: service worker
@@ -34,3 +35,16 @@ npm run build
 ```
 
 Preserve the current live game behavior unless the requested change explicitly modifies it.
+
+## Delivery workflow
+
+- `main` is the integration branch and the source of the production deployment.
+- When a requested change is complete, passes code-level validation, and is mergeable, merge it into `main` instead of maintaining a long-lived integration branch.
+- Keep a single Vercel production deployment. Do not create Vercel preview or branch deployments unless the user explicitly requests one.
+- Before merging, check the latest `main` and open pull requests so concurrent agent work is preserved.
+
+## Validation ownership
+
+- The user performs visual review, manual UX checks, and end-to-end gameplay testing.
+- By default, agents run code-level validation only: TypeScript, lint, production build, static checks, and relevant runtime error checks.
+- Do not run browser screenshots, automated visual validation, or end-to-end tests unless the user explicitly requests them.
