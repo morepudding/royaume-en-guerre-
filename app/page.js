@@ -663,6 +663,10 @@ export default function Game() {
       buffUntil: 0,
       readyAnnounced: !1,
     }),
+    orcMind = (0, t.useRef)({
+      plan: null,
+      nextThinkAt: 0,
+    }),
     audioEngine = (0, t.useRef)(null),
     battleFx = (0, t.useRef)({ shake: 0, flash: 0, color: "242,196,93" }),
     mission2Art = (0, t.useRef)({
@@ -899,6 +903,10 @@ export default function Game() {
             buffBaseId: null,
             buffUntil: 0,
             readyAnnounced: !1,
+          }),
+          (orcMind.current = {
+            plan: null,
+            nextThinkAt: r.id <= 4 ? 2.8 : 1.4,
           }),
           setCommandUi({
             charge: r.id === 6 ? 65 : r.id > 6 ? 25 : 0,
@@ -1198,31 +1206,196 @@ export default function Game() {
           (immersiveSound("wave"), navigator.vibrate?.([45, 25, 45]));
           et("Une nouvelle vague approche");
         }
-        if (
-          S.current > 1.65 &&
-          ((S.current = 0),
-          !(L.id <= 4 && d.current.every((e) => "humans" !== e.owner)))
-        ) {
-          let e = n.current.filter(
-            (e) =>
-              ("orcs" === e.owner && e.units >= 12 && !e.invulnerable) ||
-              ("orcs" === e.owner && "source" === e.special && e.units >= 12),
-          );
-          if (e.length) {
-            let r = e.sort((e, r) => r.units - e.units)[0],
-              t = L.roads
-                .filter(([e, t]) => e === r.id || t === r.id)
-                .map(([e, t]) => (e === r.id ? t : e))
-                .filter((e) => en(r.id, e))
-                .map((e) => n.current[e])
-                .sort(
-                  (e, r) =>
-                    e.units +
-                    18 * ("orcs" === e.owner) -
-                    (r.units + 18 * ("orcs" === r.owner)),
-                );
-            t[0] && ei(r.id, t[0].id, "orcs");
+        let mind = orcMind.current,
+          thinkDelay = L.id <= 2 ? 4.4 : L.id <= 5 ? 3.4 : 2.65,
+          tutorialReleased =
+            L.id > 4 || d.current.some((e) => "humans" === e.owner);
+        if (mind.plan && T.current >= mind.plan.executeAt) {
+          let launched = 0;
+          for (let order of mind.plan.orders) {
+            let source = n.current[order.from],
+              target = n.current[order.to];
+            source?.owner === "orcs" &&
+              target &&
+              ei(order.from, order.to, "orcs", order.ratio) &&
+              launched++;
           }
+          launched &&
+            mind.plan.kind === "assault" &&
+            immersiveSound("wave");
+          ((mind.plan = null),
+            (mind.nextThinkAt = T.current + thinkDelay));
+        } else if (
+          !mind.plan &&
+          tutorialReleased &&
+          T.current >= mind.nextThinkAt
+        ) {
+          let neighbors = (baseId) =>
+              L.roads
+                .filter(([from, to]) => from === baseId || to === baseId)
+                .map(([from, to]) => (from === baseId ? to : from))
+                .filter((targetId) => en(baseId, targetId)),
+            sources = n.current.filter(
+              (base) =>
+                base.owner === "orcs" &&
+                !base.invulnerable &&
+                base.units >= (L.id <= 2 ? 16 : 12),
+            ),
+            assaultGroups = new Map();
+          for (let source of sources)
+            for (let targetId of neighbors(source.id)) {
+              let target = n.current[targetId];
+              if (!target || target.owner !== "humans" || target.invulnerable)
+                continue;
+              let ratio = source.units > 46 ? 0.62 : 0.52,
+                group = assaultGroups.get(target.id) || {
+                  target,
+                  orders: [],
+                  attack: 0,
+                };
+              (group.orders.push({
+                from: source.id,
+                to: target.id,
+                ratio,
+              }),
+                (group.attack += Math.floor(source.units * ratio)),
+                assaultGroups.set(target.id, group));
+            }
+          let assaults = [...assaultGroups.values()]
+              .map((group) => {
+                let incoming = d.current
+                    .filter(
+                      (army) =>
+                        army.owner === "orcs" && army.to === group.target.id,
+                    )
+                    .reduce((sum, army) => sum + army.units, 0),
+                  defense = group.target.units * a[group.target.kind].defense,
+                  threshold = L.id <= 5 ? 0.96 : 0.76;
+                return {
+                  ...group,
+                  viable:
+                    group.attack + incoming >= defense * threshold ||
+                    group.target.units <= 8,
+                  score:
+                    group.attack - defense +
+                    9 * group.orders.length +
+                    (group.target.kind === "fortress" ? 8 : 0) +
+                    (group.target.special ? 12 : 0) +
+                    (commandPower.current.buffBaseId === group.target.id &&
+                    T.current < commandPower.current.buffUntil
+                      ? 18
+                      : 0) -
+                    0.7 * incoming,
+                };
+              })
+              .filter((group) => group.viable)
+              .sort((left, right) => right.score - left.score),
+            plan = assaults[0]
+              ? {
+                  kind: "assault",
+                  targetId: assaults[0].target.id,
+                  orders: assaults[0].orders,
+                  executeAt: T.current + (L.id <= 5 ? 2.7 : 2.15),
+                }
+              : null;
+          if (!plan) {
+            let reinforcements = [];
+            for (let front of sources) {
+              let frontNeighbors = neighbors(front.id).map(
+                (targetId) => n.current[targetId],
+              );
+              if (!frontNeighbors.some((base) => base?.owner === "humans"))
+                continue;
+              for (let donor of frontNeighbors.filter(
+                (base) =>
+                  base?.owner === "orcs" &&
+                  base.id !== front.id &&
+                  base.units >= 18 &&
+                  base.units > front.units + 7,
+              ))
+                reinforcements.push({
+                  donor,
+                  front,
+                  score: donor.units - front.units + (front.units < 18 ? 16 : 0),
+                });
+            }
+            reinforcements.sort((left, right) => right.score - left.score);
+            let reinforcement = reinforcements[0];
+            reinforcement &&
+              (plan = {
+                kind: "reinforce",
+                targetId: reinforcement.front.id,
+                orders: [
+                  {
+                    from: reinforcement.donor.id,
+                    to: reinforcement.front.id,
+                    ratio: 0.4,
+                  },
+                ],
+                executeAt: T.current + 1.7,
+              });
+          }
+          if (!plan) {
+            let expansions = [];
+            for (let source of sources)
+              for (let targetId of neighbors(source.id)) {
+                let target = n.current[targetId];
+                if (!target || target.owner !== "neutral") continue;
+                let attack = Math.floor(source.units * 0.52),
+                  defense = target.units * a[target.kind].defense;
+                attack >= 0.82 * defense &&
+                  expansions.push({
+                    source,
+                    target,
+                    score:
+                      attack - defense +
+                      (target.special ? 18 : 0) +
+                      (target.kind === "village" ? 5 : 0),
+                  });
+              }
+            expansions.sort((left, right) => right.score - left.score);
+            let expansion = expansions[0];
+            expansion &&
+              (plan = {
+                kind: "expand",
+                targetId: expansion.target.id,
+                orders: [
+                  {
+                    from: expansion.source.id,
+                    to: expansion.target.id,
+                    ratio: 0.52,
+                  },
+                ],
+                executeAt: T.current + 1.85,
+              });
+          }
+          if (plan) {
+            let target = n.current[plan.targetId];
+            ((mind.plan = plan),
+              f.current.push({
+                id: C.current++,
+                x: target.x,
+                y: target.y,
+                color: l.orcs.main,
+                text:
+                  plan.kind === "assault"
+                    ? "ASSAUT"
+                    : plan.kind === "reinforce"
+                      ? "RENFORTS"
+                      : "AVANCÉE",
+                age: 0,
+              }));
+            if (plan.kind === "assault") {
+              (et(
+                plan.orders.length > 1
+                  ? "La Horde lance un assaut coordonné !"
+                  : "La Horde prépare un assaut !",
+              ),
+                navigator.vibrate?.([18, 28, 18]));
+            } else if (plan.kind === "reinforce")
+              et("La Horde rassemble ses forces");
+            else L.id >= 5 && et("Les éclaireurs orcs avancent");
+          } else mind.nextThinkAt = T.current + 1.15;
         }
         for (let e of m.current)
           ((e.clock += N),
@@ -1590,6 +1763,64 @@ export default function Game() {
             t.setLineDash(l ? [5, 8] : []),
             t.stroke(),
             t.setLineDash([]));
+      }
+      let pendingOrcPlan = orcMind.current.plan;
+      if (pendingOrcPlan) {
+        let pulse = 0.62 + 0.22 * Math.sin(0.012 * performance.now()),
+          intentColor =
+            pendingOrcPlan.kind === "assault" ? "#ff735f" : "#f3a45f";
+        for (let order of pendingOrcPlan.orders) {
+          if ("fog" === L.mode && !eo(order.to)) continue;
+          let source = n.current[order.from],
+            target = n.current[order.to];
+          if (!source || !target) continue;
+          let fromX = E(source),
+            fromY = I(source),
+            toX = E(target),
+            toY = I(target),
+            angle = Math.atan2(toY - fromY, toX - fromX),
+            arrowX = toX - 27 * Math.cos(angle),
+            arrowY = toY - 27 * Math.sin(angle);
+          (t.save(),
+            (t.globalAlpha = pulse),
+            (t.strokeStyle = intentColor),
+            (t.shadowColor = l.orcs.glow),
+            (t.shadowBlur = 10),
+            (t.lineWidth = pendingOrcPlan.kind === "assault" ? 4 : 3),
+            t.setLineDash([7, 8]),
+            (t.lineDashOffset = -0.02 * performance.now()),
+            t.beginPath(),
+            t.moveTo(fromX, fromY),
+            t.lineTo(arrowX, arrowY),
+            t.stroke(),
+            t.setLineDash([]),
+            (t.fillStyle = intentColor),
+            t.beginPath(),
+            t.moveTo(arrowX, arrowY),
+            t.lineTo(
+              arrowX - 13 * Math.cos(angle - 0.55),
+              arrowY - 13 * Math.sin(angle - 0.55),
+            ),
+            t.lineTo(
+              arrowX - 13 * Math.cos(angle + 0.55),
+              arrowY - 13 * Math.sin(angle + 0.55),
+            ),
+            t.closePath(),
+            t.fill(),
+            t.restore());
+        }
+        let target = n.current[pendingOrcPlan.targetId];
+        if (target && ("fog" !== L.mode || eo(target.id)))
+          (t.save(),
+            (t.globalAlpha = pulse),
+            (t.strokeStyle = intentColor),
+            (t.lineWidth = 3),
+            (t.shadowColor = l.orcs.glow),
+            (t.shadowBlur = 14),
+            t.beginPath(),
+            t.arc(E(target), I(target), 31 + 4 * pulse, 0, 7),
+            t.stroke(),
+            t.restore());
       }
       for (let e of m.current) {
         let r = n.current[e.from],

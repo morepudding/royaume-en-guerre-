@@ -15,6 +15,7 @@ This repository is the source of truth for **Royaume en Guerre**.
 - Human campaign power from mission 6: `La Bannière du Roi`
 - Command fills passively and gains bonuses from human captures and road-battle victories
 - At full command, the player targets a human base: directly connected human bases send 25% and the target gains +65% production for 8 seconds
+- Orc AI telegraphs planned assaults, coordinated attacks, reinforcements and neutral expansion before executing them
 - Browser progression key: `royaumes-campaign-v1`
 
 ## Code map
@@ -29,6 +30,8 @@ This repository is the source of truth for **Royaume en Guerre**.
 Mission definitions start near the top of `app/page.js`. The game component starts at `export default function Game()`. Road-battle resolution is around the message `Les armées s’affrontent sur la route`. The selected troop percentage is stored in the `D` state / `v` ref.
 
 The command-power runtime is stored in the `commandPower` ref. UI snapshots use `commandUi`. `gainCommand`, `beginPowerTargeting`, and `activateRoyalBanner` contain the power flow.
+
+The strategic Orc AI runtime is stored in the `orcMind` ref. Its planning and execution run inside the canvas game loop; pending orders are also rendered there as animated red or orange intent arrows.
 
 ## Before publishing
 
