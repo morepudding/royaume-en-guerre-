@@ -562,6 +562,68 @@ let n = (e, r, t, n, s, a, l, i) => ({
         text: "Capture une tour, puis active RAVITAILLEMENT pour renforcer le front.",
       },
     ],
+  },
+  missionScenes = {
+    6: {
+      chapter: "ACTE II · LA HORDE DÉFERLE",
+      scene:
+        "Les cors résonnent sous les remparts. Dans la brume, trois colonnes orques convergent déjà vers la dernière porte encore debout.",
+      rule: "Défense totale · La forteresse centrale ne doit jamais tomber",
+    },
+    7: {
+      chapter: "ACTE II · LA ROUTE DU ROI",
+      scene:
+        "Les étendards royaux avancent dans un nuage de cendre. Chaque relais conquis ouvre quelques mètres de route au convoi.",
+      rule: "Escorte · Sécurise le prochain relais avant l’arrivée du convoi",
+    },
+    8: {
+      chapter: "ACTE II · LE SANCTUAIRE",
+      scene:
+        "Trois runes battent comme des cœurs autour d’une citadelle inviolable. Elles doivent toutes porter tes couleurs au même instant.",
+      rule: "Sceaux · Contrôle les trois tours pour briser la protection",
+    },
+    9: {
+      chapter: "ACTE III · TERRE BRÛLÉE",
+      scene:
+        "Les villages brûlent derrière toi. Cette fois, gagner ne signifie pas conquérir : il faut arracher le plus de soldats possible au massacre.",
+      rule: "Évacuation · Fais parvenir 70 soldats jusqu’à la sortie",
+    },
+    10: {
+      chapter: "ACTE III · LE CŒUR DE PIERRE",
+      scene:
+        "Le bastion de basalte domine la vallée. Trois runes alimentent ses murailles et rendent tout assaut frontal suicidaire.",
+      rule: "Boss · Coupe ses trois runes avant de frapper le bastion",
+    },
+    11: {
+      chapter: "ACTE III · LE FLEUVE NOIR",
+      scene:
+        "Le pont s’est effondré dans le courant. Sur l’autre rive, la Horde se rassemble pendant que tes bâtisseurs attendent des renforts.",
+      rule: "Chantier · Sacrifie 40 soldats pour rouvrir la route",
+    },
+    12: {
+      chapter: "ACTE IV · LE SERMENT BRISÉ",
+      scene:
+        "Un messager agonisant n’a livré que quelques mots : l’un de tes capitaines a vendu sa garnison. Tu ignores encore lequel.",
+      rule: "Trahison · Une de tes positions changera de camp après 30 secondes",
+    },
+    13: {
+      chapter: "ACTE IV · SANS LUNE",
+      scene:
+        "Sous les arbres noirs, les routes disparaissent et les tambours semblent venir de partout. Chaque position prise repousse un peu la nuit.",
+      rule: "Brouillard · Avance pour révéler les positions ennemies",
+    },
+    14: {
+      chapter: "ACTE IV · LE TRÔNE VIDE",
+      scene:
+        "La couronne des anciens rois repose au centre de la plaine. Deux armées la voient. Une seule pourra la garder assez longtemps.",
+      rule: "Domination · La relique rapporte un point par seconde",
+    },
+    15: {
+      chapter: "ACTE V · L’AUBE ROUGE",
+      scene:
+        "La nuit touche à sa fin. Quand le soleil franchira les montagnes, l’armée qui aura préparé le terrain recevra le dernier renfort du royaume.",
+      rule: "Finale · Tiens les deux tours et rassemble 120 soldats avant l’aube",
+    },
   };
 
 export default function Game() {
@@ -598,7 +660,8 @@ export default function Game() {
     [Q, X] = (0, t.useState)(0),
     [z, K] = (0, t.useState)(""),
     [Y, Z] = (0, t.useState)({ humans: 0, orcs: 0, time: 0 }),
-    [_, ee] = (0, t.useState)({ unlocked: 1, crowns: {} });
+    [_, ee] = (0, t.useState)({ unlocked: 1, crowns: {} }),
+    [missionIntro, setMissionIntro] = (0, t.useState)(null);
   ((0, t.useEffect)(() => {
     let e = window.setTimeout(() => {
       try {
@@ -740,7 +803,8 @@ export default function Game() {
     el = (0, t.useCallback)(
       (e) => {
         let r = s[e - 1];
-        ((h.current = r),
+        (setMissionIntro(null),
+          (h.current = r),
           (n.current = u(r)),
           (d.current = []),
           (m.current = []),
@@ -771,6 +835,13 @@ export default function Game() {
           er(440, 0.09, 0.025));
       },
       [er],
+    ),
+    openMission = (0, t.useCallback)(
+      (e) => {
+        let r = s[e - 1];
+        r.id >= 6 ? setMissionIntro(r) : el(e);
+      },
+      [el],
     ),
     ei = (0, t.useCallback)(
       (e, r, t, s) => {
@@ -1002,6 +1073,8 @@ export default function Game() {
                     text: "CHOC",
                     age: 0,
                   }),
+                  er(120, 0.11, 0.055),
+                  navigator.vibrate?.([22, 18, 35]),
                   et("Les armées s’affrontent sur la route"));
               }
             }
@@ -1131,17 +1204,105 @@ export default function Game() {
           }),
           K(es()));
       }
-      let A = t.createLinearGradient(0, 0, o, c);
-      (A.addColorStop(0, "river" === L.terrain ? "#183b38" : "#22422f"),
-        A.addColorStop(0.55, "#172d23"),
-        A.addColorStop(1, "mountains" === L.terrain ? "#3a3029" : "#35271d"),
+      let terrainColors = {
+          plain: ["#294c31", "#193523", "#34291b"],
+          valley: ["#315039", "#183326", "#3d2d1f"],
+          mountains: ["#303b32", "#1d2d27", "#46352d"],
+          marsh: ["#183b35", "#122c28", "#2d3022"],
+          river: ["#24463d", "#15342f", "#3a3024"],
+        }[L.terrain] || ["#294c31", "#193523", "#34291b"],
+        A = t.createLinearGradient(0, 0, o, c);
+      (A.addColorStop(0, terrainColors[0]),
+        A.addColorStop(0.55, terrainColors[1]),
+        A.addColorStop(1, terrainColors[2]),
         (t.fillStyle = A),
+        t.fillRect(0, 0, o, c));
+      t.save();
+      for (let e = 0; e < 95; e++) {
+        let r = (37 * e + 19 * Math.sin(1.7 * e)) % o,
+          n = (61 * e + 23 * Math.cos(2.1 * e)) % c,
+          s = 0.8 + (e % 4) * 0.45;
+        ((t.globalAlpha = 0.055 + (e % 3) * 0.018),
+          (t.fillStyle = 0 === e % 2 ? "#f4ddb0" : "#07100c"),
+          t.beginPath(),
+          t.arc(r, n, s, 0, 7),
+          t.fill());
+      }
+      if ("river" === L.terrain) {
+        let e = t.createLinearGradient(0.4 * o, 0, 0.68 * o, 0);
+        (e.addColorStop(0, "rgba(25,77,78,0)"),
+          e.addColorStop(0.28, "rgba(38,105,105,.48)"),
+          e.addColorStop(0.5, "rgba(62,132,128,.68)"),
+          e.addColorStop(0.72, "rgba(38,105,105,.48)"),
+          e.addColorStop(1, "rgba(25,77,78,0)"),
+          (t.fillStyle = e),
+          t.beginPath(),
+          t.moveTo(0.42 * o, 0),
+          t.bezierCurveTo(0.6 * o, 0.26 * c, 0.38 * o, 0.72 * c, 0.55 * o, c),
+          t.lineTo(0.68 * o, c),
+          t.bezierCurveTo(0.5 * o, 0.7 * c, 0.72 * o, 0.25 * c, 0.55 * o, 0),
+          t.closePath(),
+          t.fill());
+        for (let e = 0; e < 7; e++)
+          ((t.strokeStyle = "rgba(181,224,211,.16)"),
+            (t.lineWidth = 1),
+            t.beginPath(),
+            t.moveTo(0.45 * o + 7 * e, 12 + 49 * e),
+            t.quadraticCurveTo(0.53 * o, 25 + 48 * e, 0.59 * o, 12 + 49 * e),
+            t.stroke());
+      } else if ("mountains" === L.terrain) {
+        for (let e = 0; e < 9; e++) {
+          let r = (e / 8) * o,
+            n = 18 + 16 * (e % 3);
+          ((t.fillStyle = "rgba(8,13,11,.24)"),
+            t.beginPath(),
+            t.moveTo(r - 58, n + 52),
+            t.lineTo(r, n - 22),
+            t.lineTo(r + 66, n + 52),
+            t.fill(),
+            (t.strokeStyle = "rgba(239,220,178,.08)"),
+            t.beginPath(),
+            t.moveTo(r - 15, n - 3),
+            t.lineTo(r, n - 22),
+            t.lineTo(r + 17, n - 2),
+            t.stroke());
+        }
+      } else if ("marsh" === L.terrain) {
+        for (let e = 0; e < 12; e++) {
+          let r = (83 * e + 40) % o,
+            n = (47 * e + 35) % c;
+          ((t.fillStyle = "rgba(41,103,92,.18)"),
+            t.beginPath(),
+            t.ellipse(r, n, 28 + (e % 3) * 9, 9 + (e % 2) * 4, 0.2, 0, 7),
+            t.fill());
+        }
+      } else {
+        for (let e = 0; e < 34; e++) {
+          let r = (71 * e + 29) % o,
+            n = (43 * e + 17) % c;
+          ((t.strokeStyle = "rgba(198,213,161,.08)"),
+            t.beginPath(),
+            t.moveTo(r, n + 5),
+            t.lineTo(r - 2, n - 2 - (e % 4)),
+            t.moveTo(r, n + 5),
+            t.lineTo(r + 3, n),
+            t.stroke());
+        }
+      }
+      let vignette = t.createRadialGradient(
+        o / 2,
+        c / 2,
+        0,
+        o / 2,
+        c / 2,
+        Math.max(o, c) * 0.72,
+      );
+      (vignette.addColorStop(0.55, "rgba(0,0,0,0)"),
+        vignette.addColorStop(1, "rgba(0,0,0,.48)"),
+        (t.globalAlpha = 1),
+        (t.fillStyle = vignette),
         t.fillRect(0, 0, o, c),
-        (t.globalAlpha = 0.1),
-        (t.strokeStyle = "#f5dfad"));
-      for (let e = -c; e < o; e += 38)
-        (t.beginPath(), t.moveTo(e, 0), t.lineTo(e + c, c), t.stroke());
-      t.globalAlpha = 1;
+        t.restore());
       let E = (e) => 24 + e.x * b,
         I = (e) => 44 + e.y * M;
       for (let [e, r] of L.roads) {
@@ -1155,8 +1316,14 @@ export default function Game() {
         (t.beginPath(),
           t.moveTo(E(s), I(s)),
           t.lineTo(E(a), I(a)),
-          (t.strokeStyle = l ? "rgba(232,93,72,.35)" : "rgba(237,222,181,.19)"),
-          (t.lineWidth = l ? 5 : 3),
+          (t.strokeStyle = "rgba(4,8,6,.48)"),
+          (t.lineWidth = l ? 8 : 7),
+          t.stroke(),
+          t.beginPath(),
+          t.moveTo(E(s), I(s)),
+          t.lineTo(E(a), I(a)),
+          (t.strokeStyle = l ? "rgba(232,93,72,.55)" : "rgba(218,197,151,.28)"),
+          (t.lineWidth = l ? 4 : 3),
           t.setLineDash(l ? [5, 8] : []),
           t.stroke(),
           t.setLineDash([]));
@@ -1200,26 +1367,68 @@ export default function Game() {
           s = n.current[e.to],
           a = E(r) + (E(s) - E(r)) * e.progress,
           i = I(r) + (I(s) - I(r)) * e.progress,
-          o = l[e.owner];
+          o = l[e.owner],
+          u = Math.atan2(I(s) - I(r), E(s) - E(r)),
+          c = 1.5 * Math.sin(0.012 * performance.now() + e.id);
         (t.save(),
+          (t.strokeStyle = o.main),
+          (t.globalAlpha = 0.18),
+          (t.lineWidth = 7),
+          t.beginPath(),
+          t.moveTo(a - 22 * Math.cos(u), i - 22 * Math.sin(u)),
+          t.lineTo(a - 7 * Math.cos(u), i - 7 * Math.sin(u)),
+          t.stroke(),
+          (t.globalAlpha = 1),
+          t.translate(a, i + c),
+          t.rotate(u),
           (t.shadowColor = o.glow),
-          (t.shadowBlur = 9),
-          (t.fillStyle = o.main));
-        for (let r = 0; r < Math.min(5, Math.ceil(e.units / 5)); r++)
-          (t.beginPath(),
-            t.arc(
-              a + 6 * Math.cos(2.3 * r),
-              i + 6 * Math.sin(2.3 * r),
-              4,
-              0,
-              7,
-            ),
-            t.fill());
-        ((t.shadowBlur = 0),
+          (t.shadowBlur = 14),
+          (t.fillStyle = "rgba(5,9,7,.94)"),
+          t.beginPath(),
+          t.moveTo(13, 0),
+          t.lineTo(2, -11),
+          t.lineTo(-11, -8),
+          t.lineTo(-13, 0),
+          t.lineTo(-11, 8),
+          t.lineTo(2, 11),
+          t.closePath(),
+          t.fill(),
+          (t.strokeStyle = o.main),
+          (t.lineWidth = 2.5),
+          t.stroke(),
+          (t.shadowBlur = 0),
+          (t.fillStyle = o.main),
+          t.beginPath(),
+          t.moveTo(10, 0),
+          t.lineTo(-2, -6),
+          t.lineTo(-2, 6),
+          t.closePath(),
+          t.fill(),
+          (t.strokeStyle = "rgba(255,248,224,.65)"),
+          (t.lineWidth = 1),
+          t.beginPath(),
+          t.moveTo(-4, -12),
+          t.lineTo(-4, 11),
+          t.stroke(),
+          (t.fillStyle = o.main),
+          t.beginPath(),
+          t.moveTo(-4, -11),
+          t.lineTo(-13, -8),
+          t.lineTo(-4, -2),
+          t.closePath(),
+          t.fill(),
+          t.rotate(-u),
+          (t.fillStyle = "rgba(5,8,7,.94)"),
+          t.beginPath(),
+          t.roundRect(-15, -27, 30, 16, 8),
+          t.fill(),
+          (t.strokeStyle = o.main),
+          (t.lineWidth = 1),
+          t.stroke(),
           (t.fillStyle = "#fff7df"),
-          (t.font = "800 11px var(--font-geist)"),
+          (t.font = "900 10px var(--font-geist)"),
           (t.textAlign = "center"),
-          t.fillText(String(Math.ceil(e.units)), a, i - 11),
+          t.fillText(String(Math.ceil(e.units)), 0, -16),
           t.restore());
       }
       if (null !== x.current && j.current) {
@@ -1281,6 +1490,19 @@ export default function Game() {
           (t.lineWidth = o || u ? 4 : 2),
           t.stroke(),
           (t.shadowBlur = 0),
+          (t.globalAlpha = 0.38),
+          (t.strokeStyle = i.main),
+          (t.lineWidth = 2),
+          t.beginPath(),
+          t.arc(
+            r,
+            n,
+            a + 12,
+            -Math.PI / 2,
+            -Math.PI / 2 + Math.PI * 2 * Math.min(1, e.units / 60),
+          ),
+          t.stroke(),
+          (t.globalAlpha = 1),
           (t.fillStyle = i.dark),
           t.fillRect(r - 0.65 * a, n - 0.35 * a, 1.3 * a, 0.9 * a),
           (t.fillStyle = i.main),
@@ -1293,6 +1515,20 @@ export default function Game() {
             t.moveTo(r, n - 0.88 * a),
             t.lineTo(r - 0.5 * a, n),
             t.lineTo(r + 0.5 * a, n),
+            t.fill()),
+          "neutral" !== e.owner &&
+            ((t.strokeStyle = "#e9dfc7"),
+            (t.lineWidth = 1.5),
+            t.beginPath(),
+            t.moveTo(r + 0.48 * a, n - 0.55 * a),
+            t.lineTo(r + 0.48 * a, n - 1.18 * a),
+            t.stroke(),
+            (t.fillStyle = i.main),
+            t.beginPath(),
+            t.moveTo(r + 0.48 * a, n - 1.16 * a),
+            t.lineTo(r + 1.02 * a, n - 0.98 * a),
+            t.lineTo(r + 0.48 * a, n - 0.78 * a),
+            t.closePath(),
             t.fill()),
           (t.fillStyle = "#161a17"),
           t.beginPath(),
@@ -1331,16 +1567,34 @@ export default function Game() {
           s = 44 + e.y * M;
         (t.save(),
           (t.globalAlpha = 1 - r),
+          "CHOC" === e.text &&
+            ((t.translate(n, s)),
+            (t.rotate(0.35 * r)),
+            (t.strokeStyle = "#fff2c4"),
+            (t.lineWidth = 3 * (1 - r) + 1),
+            (t.shadowColor = "#ff9c45"),
+            (t.shadowBlur = 22 * (1 - r)),
+            Array.from({ length: 12 }).forEach((_, e) => {
+              let n = (e / 12) * Math.PI * 2,
+                s = 9 + 18 * r,
+                a = 25 + 34 * r + (e % 3) * 5;
+              (t.beginPath(),
+                t.moveTo(Math.cos(n) * s, Math.sin(n) * s),
+                t.lineTo(Math.cos(n) * a, Math.sin(n) * a),
+                t.stroke());
+            }),
+            t.rotate(-0.35 * r),
+            t.translate(-n, -s)),
           (t.strokeStyle = e.color),
-          (t.lineWidth = 3),
+          (t.lineWidth = "CHOC" === e.text ? 5 : 3),
           t.beginPath(),
-          t.arc(n, s, 34 + 30 * r, 0, 7),
+          t.arc(n, s, ("CHOC" === e.text ? 22 : 34) + 38 * r, 0, 7),
           t.stroke(),
           e.text &&
             ((t.fillStyle = "#fff7dc"),
-            (t.font = "900 12px var(--font-geist)"),
+            (t.font = `900 ${"CHOC" === e.text ? 15 : 12}px var(--font-geist)`),
             (t.textAlign = "center"),
-            t.fillText(e.text, n, s - 34 - 20 * r)),
+            t.fillText(e.text, n, s - 34 - 24 * r)),
           t.restore());
       }
       s = requestAnimationFrame(u);
@@ -1516,7 +1770,7 @@ export default function Game() {
                       {
                         disabled: t,
                         className: `mission-card ${t ? "locked" : ""}`,
-                        onClick: () => el(e.id),
+                        onClick: () => openMission(e.id),
                         children: [
                           (0, r.jsx)("span", {
                             className: "mission-number",
@@ -1539,6 +1793,62 @@ export default function Game() {
                   }),
                 }),
               ],
+            }),
+          missionIntro &&
+            (0, r.jsx)("div", {
+              className: `mission-intro terrain-${missionIntro.terrain}`,
+              children: (0, r.jsxs)("div", {
+                className: "mission-intro-panel",
+                children: [
+                  (0, r.jsxs)("div", {
+                    className: "intro-standard",
+                    children: [
+                      (0, r.jsx)("span", { children: "♜" }),
+                      (0, r.jsx)("i", {}),
+                    ],
+                  }),
+                  (0, r.jsx)("small", {
+                    children: missionScenes[missionIntro.id]?.chapter,
+                  }),
+                  (0, r.jsx)("span", {
+                    className: "intro-region",
+                    children: missionIntro.region,
+                  }),
+                  (0, r.jsx)("h2", { children: missionIntro.name }),
+                  (0, r.jsx)("p", {
+                    className: "intro-scene",
+                    children:
+                      missionScenes[missionIntro.id]?.scene ||
+                      missionIntro.briefing,
+                  }),
+                  (0, r.jsxs)("div", {
+                    className: "intro-order",
+                    children: [
+                      (0, r.jsx)("span", { children: "ORDRE DE BATAILLE" }),
+                      (0, r.jsx)("b", {
+                        children:
+                          missionScenes[missionIntro.id]?.rule ||
+                          missionIntro.objective,
+                      }),
+                    ],
+                  }),
+                  (0, r.jsxs)("div", {
+                    className: "intro-actions",
+                    children: [
+                      (0, r.jsx)("button", {
+                        className: "primary-button",
+                        onClick: () => el(missionIntro.id),
+                        children: "Entrer sur le champ",
+                      }),
+                      (0, r.jsx)("button", {
+                        className: "secondary-button",
+                        onClick: () => setMissionIntro(null),
+                        children: "Retour à la campagne",
+                      }),
+                    ],
+                  }),
+                ],
+              }),
             }),
           "battle" === P &&
             (0, r.jsxs)(r.Fragment, {
@@ -1632,7 +1942,9 @@ export default function Game() {
                         (0, r.jsx)("button", {
                           className: "primary-button",
                           onClick: () =>
-                            "won" === E && O < 15 ? el(O + 1) : el(O),
+                            "won" === E && O < 15
+                              ? openMission(O + 1)
+                              : el(O),
                           children:
                             "won" === E && O < 15
                               ? "Mission suivante"

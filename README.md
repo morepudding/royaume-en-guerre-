@@ -7,6 +7,9 @@ Cette version contient :
 - 15 missions de campagne ;
 - le choix d'envoi de `¼`, `½` ou `TOUT` des troupes ;
 - les batailles lorsque deux armées se croisent sur une route ;
+- des scènes d'introduction narratives pour les missions 6 à 15 ;
+- des terrains, routes, armées, forteresses et impacts retravaillés ;
+- une interface de bataille plus discrète qui préserve le champ de jeu ;
 - une interface pensée pour le mobile et le mode paysage ;
 - une progression sauvegardée localement dans le navigateur.
 

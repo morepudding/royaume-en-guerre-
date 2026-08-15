@@ -139,7 +139,7 @@ button {
 }
 .battle-card {
   background: #172b21;
-  border: 1px solid #f2c45d47;
+  border: 1px solid #f2c45d5c;
   border-radius: 18px;
   flex: 1;
   min-height: 0;
@@ -147,7 +147,8 @@ button {
   overflow: hidden;
   box-shadow:
     0 20px 60px #0000006b,
-    inset 0 1px #ffffff12;
+    inset 0 1px #ffffff1c,
+    inset 0 0 55px #00000035;
 }
 canvas {
   touch-action: none;
@@ -180,13 +181,13 @@ canvas {
   border-radius: 999px;
   align-items: center;
   gap: 9px;
-  max-width: 56%;
-  padding: 7px 12px;
+  max-width: 42%;
+  min-height: 27px;
+  padding: 5px 10px;
   display: flex;
   position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translate(-50%);
+  top: 9px;
+  left: 10px;
   box-shadow: 0 8px 24px #00000040;
 }
 .objective-chip span {
@@ -198,7 +199,7 @@ canvas {
 .objective-chip b {
   text-overflow: ellipsis;
   color: #eee6d4;
-  font-size: 9px;
+  font-size: 8px;
   overflow: hidden;
 }
 .dispatch-panel {
@@ -285,14 +286,15 @@ canvas {
   font-weight: 850;
   animation: 0.18s ease-out toast-in;
   position: absolute;
-  top: 48px;
-  left: 50%;
-  transform: translate(-50%);
+  top: 10px;
+  right: 10px;
+  max-width: 42%;
+  text-align: right;
 }
 @keyframes toast-in {
   0% {
     opacity: 0;
-    transform: translate(-50%, -8px);
+    transform: translateY(-8px);
   }
 }
 .campaign-overlay,
@@ -306,6 +308,137 @@ canvas {
 .campaign-overlay {
   padding: 22px clamp(18px, 4vw, 48px);
   overflow: auto;
+}
+.mission-intro {
+  z-index: 7;
+  background:
+    linear-gradient(90deg, #040705f5 0%, #07100ddd 48%, #07100d8f 100%),
+    radial-gradient(circle at 78% 45%, #bd6b2f52, transparent 26%),
+    linear-gradient(145deg, #244631, #101d17 55%, #39261b);
+  place-items: center;
+  display: grid;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.mission-intro:before,
+.mission-intro:after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+}
+.mission-intro:before {
+  opacity: 0.24;
+  background-image:
+    linear-gradient(115deg, transparent 48%, #f4d99816 49%, transparent 51%),
+    radial-gradient(circle at 20% 20%, #fff 0 1px, transparent 1.5px);
+  background-size: 72px 72px, 43px 43px;
+}
+.mission-intro:after {
+  background: radial-gradient(circle at 50% 50%, transparent 40%, #020403c7 100%);
+}
+.mission-intro.terrain-mountains {
+  background:
+    linear-gradient(90deg, #040605f5, #0a100ddd 58%, #16100db3),
+    radial-gradient(circle at 78% 40%, #c06d334f, transparent 23%),
+    linear-gradient(155deg, #303b32, #1a2520 55%, #46352d);
+}
+.mission-intro.terrain-marsh,
+.mission-intro.terrain-river {
+  background:
+    linear-gradient(90deg, #030706f5, #07110fdd 58%, #071412a6),
+    radial-gradient(circle at 76% 45%, #4fa69a38, transparent 25%),
+    linear-gradient(155deg, #183b35, #102824 55%, #293026);
+}
+.mission-intro-panel {
+  z-index: 1;
+  width: min(660px, 88%);
+  text-align: center;
+  animation: 0.45s cubic-bezier(0.2, 0.75, 0.25, 1) intro-rise;
+  position: relative;
+}
+@keyframes intro-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+}
+.intro-standard {
+  width: 54px;
+  height: 60px;
+  color: #20170d;
+  background: linear-gradient(#f8d77f, #b47a30);
+  clip-path: polygon(0 0, 100% 0, 100% 76%, 50% 100%, 0 76%);
+  place-items: center;
+  margin: 0 auto 10px;
+  font-size: 25px;
+  display: grid;
+  filter: drop-shadow(0 10px 20px #0009);
+}
+.mission-intro-panel > small {
+  color: var(--gold);
+  letter-spacing: 0.26em;
+  font-size: 7px;
+  font-weight: 950;
+}
+.intro-region {
+  color: #9ea99f;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-top: 5px;
+  font-size: 7px;
+  font-weight: 800;
+  display: block;
+}
+.mission-intro h2 {
+  font-family: var(--font-cinzel), serif;
+  color: #fff4d9;
+  text-shadow: 0 3px 22px #000;
+  margin: 4px 0 10px;
+  font-size: clamp(27px, 7vh, 48px);
+  line-height: 0.95;
+}
+.intro-scene {
+  color: #c7c4b8;
+  max-width: 600px;
+  margin: auto;
+  font-family: var(--font-cinzel), serif;
+  font-size: clamp(10px, 2.5vh, 14px);
+  line-height: 1.55;
+}
+.intro-order {
+  text-align: left;
+  background: #0205049c;
+  border: 1px solid #f2c45d42;
+  border-left: 3px solid var(--gold);
+  border-radius: 3px 11px 11px 3px;
+  width: min(530px, 100%);
+  margin: 15px auto 0;
+  padding: 9px 13px;
+}
+.intro-order span {
+  color: var(--gold);
+  letter-spacing: 0.16em;
+  margin-bottom: 3px;
+  font-size: 7px;
+  font-weight: 950;
+  display: block;
+}
+.intro-order b {
+  color: #f0eadb;
+  font-size: 10px;
+}
+.intro-actions {
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  display: flex;
+}
+.intro-actions button {
+  width: auto;
+  min-width: 185px;
+  margin: 0;
 }
 .campaign-head {
   text-align: center;
@@ -593,7 +726,31 @@ canvas {
     top: 7px;
   }
   .action-toast {
-    top: 41px;
+    top: 7px;
+    right: 7px;
+  }
+  .intro-standard {
+    width: 39px;
+    height: 43px;
+    margin-bottom: 5px;
+    font-size: 19px;
+  }
+  .mission-intro h2 {
+    margin: 2px 0 6px;
+    font-size: clamp(23px, 7vh, 38px);
+  }
+  .intro-scene {
+    line-height: 1.4;
+  }
+  .intro-order {
+    margin-top: 8px;
+    padding: 6px 10px;
+  }
+  .intro-actions {
+    margin-top: 6px;
+  }
+  .intro-actions button {
+    padding: 8px 13px;
   }
 }
 @media (orientation: landscape) and (max-height: 390px) {
@@ -618,7 +775,29 @@ canvas {
     width: 210px;
   }
   .objective-chip {
-    max-width: 48%;
+    max-width: 43%;
+  }
+  .mission-intro-panel {
+    width: 92%;
+  }
+  .intro-standard,
+  .intro-region {
+    display: none;
+  }
+  .mission-intro h2 {
+    font-size: 24px;
+  }
+  .intro-scene {
+    max-width: 82%;
+    font-size: 8px;
+  }
+  .intro-order {
+    margin-top: 5px;
+    padding: 5px 9px;
+  }
+  .intro-actions button {
+    min-width: 150px;
+    padding: 6px 10px;
   }
   .dispatch-panel .supply-toggle {
     font-size: 0;
