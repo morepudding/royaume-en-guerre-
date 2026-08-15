@@ -650,6 +650,13 @@ export default function Game() {
     M = (0, t.useRef)(null),
     N = (0, t.useRef)(!1),
     L = (0, t.useRef)(0),
+    commandPower = (0, t.useRef)({
+      charge: 0,
+      targeting: !1,
+      buffBaseId: null,
+      buffUntil: 0,
+      readyAnnounced: !1,
+    }),
     audioEngine = (0, t.useRef)(null),
     battleFx = (0, t.useRef)({ shake: 0, flash: 0, color: "242,196,93" }),
     [P, A] = (0, t.useState)("campaign"),
@@ -664,7 +671,12 @@ export default function Game() {
     [z, K] = (0, t.useState)(""),
     [Y, Z] = (0, t.useState)({ humans: 0, orcs: 0, time: 0 }),
     [_, ee] = (0, t.useState)({ unlocked: 1, crowns: {} }),
-    [missionIntro, setMissionIntro] = (0, t.useState)(null);
+    [missionIntro, setMissionIntro] = (0, t.useState)(null),
+    [commandUi, setCommandUi] = (0, t.useState)({
+      charge: 0,
+      targeting: !1,
+      active: 0,
+    });
   ((0, t.useEffect)(() => {
     let e = window.setTimeout(() => {
       try {
@@ -856,6 +868,18 @@ export default function Game() {
           (w.current = null),
           (j.current = null),
           (L.current = 0),
+          (commandPower.current = {
+            charge: r.id === 6 ? 65 : r.id > 6 ? 25 : 0,
+            targeting: !1,
+            buffBaseId: null,
+            buffUntil: 0,
+            readyAnnounced: !1,
+          }),
+          setCommandUi({
+            charge: r.id === 6 ? 65 : r.id > 6 ? 25 : 0,
+            targeting: !1,
+            active: 0,
+          }),
           X(0),
           q(e),
           I("playing"),
@@ -883,6 +907,29 @@ export default function Game() {
       },
       [el],
     ),
+    gainCommand = (0, t.useCallback)((e) => {
+      if (h.current.id < 6 || e <= 0) return;
+      let r = commandPower.current,
+        n = Math.min(100, r.charge + e);
+      ((r.charge = n),
+        setCommandUi((e) => ({ ...e, charge: n })));
+    }, []),
+    beginPowerTargeting = (0, t.useCallback)(() => {
+      let e = commandPower.current;
+      if (h.current.id < 6 || "playing" !== g.current) return;
+      if (e.targeting) {
+        ((e.targeting = !1),
+          setCommandUi((e) => ({ ...e, targeting: !1 })),
+          et("Ordre annulé"));
+        return;
+      }
+      if (e.charge < 100) return void et("Commandement insuffisant");
+      ((e.targeting = !0),
+        setCommandUi((e) => ({ ...e, targeting: !0 })),
+        immersiveSound("magic"),
+        navigator.vibrate?.(22),
+        et("Choisis une base alliée"));
+    }, [et, immersiveSound]),
     ei = (0, t.useCallback)(
       (e, r, t, s) => {
         if ("playing" !== g.current || "battle" !== p.current || !en(e, r))
@@ -925,6 +972,55 @@ export default function Game() {
         );
       },
       [er, immersiveSound],
+    ),
+    activateRoyalBanner = (0, t.useCallback)(
+      (e) => {
+        let r = commandPower.current,
+          t = n.current[e];
+        if (!r.targeting || r.charge < 100) return !1;
+        if (!t || "humans" !== t.owner)
+          return (
+            immersiveSound("invalid"),
+            navigator.vibrate?.(35),
+            et("La bannière exige une base alliée"),
+            !1
+          );
+        let s = h.current.roads
+            .filter(([r, t]) => r === e || t === e)
+            .map(([r, t]) => (r === e ? t : r)),
+          a = 0;
+        for (let r of s) {
+          let s = n.current[r];
+          s?.owner === "humans" && r !== e && ei(r, e, "humans", 0.25) && a++;
+        }
+        return (
+          (r.charge = 0),
+          (r.targeting = !1),
+          (r.buffBaseId = e),
+          (r.buffUntil = T.current + 8),
+          (r.readyAnnounced = !1),
+          setCommandUi({ charge: 0, targeting: !1, active: 8 }),
+          f.current.push({
+            id: C.current++,
+            x: t.x,
+            y: t.y,
+            color: l.humans.main,
+            text: "BANNIÈRE",
+            age: 0,
+          }),
+          impactFeedback(t.x, t.y, l.humans.main, 1.3),
+          immersiveSound("magic"),
+          er(920, 0.24, 0.055),
+          navigator.vibrate?.([30, 25, 65]),
+          et(
+            a
+              ? `La Bannière rallie ${a} garnison${a > 1 ? "s" : ""} !`
+              : "La Bannière renforce la production !",
+          ),
+          !0
+        );
+      },
+      [ei, er, et, immersiveSound, impactFeedback],
     ),
     eo = (e) => {
       if ("fog" !== h.current.mode) return !0;
@@ -969,10 +1065,20 @@ export default function Game() {
         ? `translate3d(${(Math.random() - 0.5) * activeFx.shake}px, ${(Math.random() - 0.5) * activeFx.shake}px, 0)`
         : "translate3d(0,0,0)";
       if ("battle" === p.current && "playing" === g.current) {
-        for (let e of ((T.current += N),
-        (S.current += N),
-        (R.current += N),
-        n.current))
+        ((T.current += N),
+          (S.current += N),
+          (R.current += N));
+        if (L.id >= 6) {
+          let e = commandPower.current;
+          ((e.charge = Math.min(100, e.charge + 1.15 * N)),
+            e.charge >= 100 &&
+              !e.readyAnnounced &&
+              ((e.readyAnnounced = !0),
+              immersiveSound("magic"),
+              navigator.vibrate?.([18, 24, 32]),
+              et("La Bannière du Roi est prête")));
+        }
+        for (let e of n.current)
           "neutral" === e.owner ||
             e.invulnerable ||
             (e.units = Math.min(
@@ -984,6 +1090,11 @@ export default function Game() {
                   "boss" === L.mode &&
                   "boss" === e.special
                     ? 1.35
+                    : 1) *
+                  ("humans" === e.owner &&
+                  commandPower.current.buffBaseId === e.id &&
+                  T.current < commandPower.current.buffUntil
+                    ? 1.65
                     : 1),
             ));
         if ("relic" === L.mode) {
@@ -1123,6 +1234,9 @@ export default function Game() {
                   u = t.y + (l.y - t.y) * i;
                 ((s.units -= r),
                   (a.units -= r),
+                  ((s.owner === "humans" && s.units > 0 && a.units <= 0) ||
+                    (a.owner === "humans" && a.units > 0 && s.units <= 0)) &&
+                    gainCommand(14),
                   s.units <= 0 && e.add(s.id),
                   a.units <= 0 && e.add(a.id),
                   f.current.push({
@@ -1234,6 +1348,7 @@ export default function Game() {
             "humans" === r.owner &&
               i &&
               (er(780, 0.16, 0.05),
+              gainCommand(22),
               et("Position capturée !"),
               1 === L.id && X((e) => Math.min(2, e + 1))),
             e.add(r.id));
@@ -1271,6 +1386,14 @@ export default function Game() {
           audioEngine.current?.setIntensity(
             Math.min(1, 0.18 + 0.08 * d.current.length + (T.current > 45 ? 0.12 : 0)),
           ),
+          setCommandUi({
+            charge: commandPower.current.charge,
+            targeting: commandPower.current.targeting,
+            active: Math.max(
+              0,
+              Math.ceil(commandPower.current.buffUntil - T.current),
+            ),
+          }),
           Z({
             humans: n.current.filter((e) => "humans" === e.owner).length,
             orcs: n.current.filter((e) => "orcs" === e.owner).length,
@@ -1551,19 +1674,38 @@ export default function Game() {
         }
         let i = l[e.owner],
           o = x.current === e.id,
-          u = w.current === e.id;
+          u = w.current === e.id,
+          isPowerTarget =
+            commandPower.current.targeting && "humans" === e.owner,
+          isBannered =
+            commandPower.current.buffBaseId === e.id &&
+            T.current < commandPower.current.buffUntil;
         if (
           (t.save(),
           (t.shadowColor = i.glow),
-          (t.shadowBlur = o || u ? 25 : 11),
+          (t.shadowBlur = o || u || isPowerTarget || isBannered ? 25 : 11),
           t.beginPath(),
           t.arc(r, n, a + 8, 0, 7),
           (t.fillStyle = "rgba(8,13,11,.92)"),
           t.fill(),
-          (t.strokeStyle = u ? "#fff4d0" : i.main),
-          (t.lineWidth = o || u ? 4 : 2),
+          (t.strokeStyle = u || isPowerTarget || isBannered ? "#fff4d0" : i.main),
+          (t.lineWidth = o || u || isPowerTarget || isBannered ? 4 : 2),
           t.stroke(),
           (t.shadowBlur = 0),
+          (isPowerTarget || isBannered) &&
+            ((t.strokeStyle = isBannered ? "#fff0a8" : "rgba(242,196,93,.72)"),
+            (t.lineWidth = isBannered ? 3 : 2),
+            t.setLineDash(isPowerTarget && !isBannered ? [5, 5] : []),
+            t.beginPath(),
+            t.arc(
+              r,
+              n,
+              a + 16 + 2 * Math.sin(0.006 * performance.now()),
+              0,
+              7,
+            ),
+            t.stroke(),
+            t.setLineDash([])),
           (t.globalAlpha = 0.38),
           (t.strokeStyle = i.main),
           (t.lineWidth = 2),
@@ -1619,6 +1761,13 @@ export default function Game() {
           (t.font = "850 12px var(--font-geist)"),
           (t.textAlign = "center"),
           t.fillText(String(Math.floor(e.units)), r, n + 0.65 * a + 5),
+          isBannered &&
+            ((t.fillStyle = "#fff0a8"),
+            (t.shadowColor = l.humans.glow),
+            (t.shadowBlur = 12),
+            (t.font = "900 17px var(--font-geist)"),
+            t.fillText("♛", r, n - a - 13),
+            (t.shadowBlur = 0)),
           e.special)
         ) {
           let s = {
@@ -1695,7 +1844,7 @@ export default function Game() {
         (cancelAnimationFrame(s), o.disconnect());
       }
     );
-  }, [et, ea, ei, es, er]);
+  }, [et, ea, ei, es, er, gainCommand, immersiveSound]);
   let eu = (e) => {
       let r = e.currentTarget.getBoundingClientRect();
       return {
@@ -1825,6 +1974,14 @@ export default function Game() {
               if ("playing" !== E) return;
               let r = eu(e),
                 t = ec(r.x, r.y, r.w, r.h);
+              if (commandPower.current.targeting) {
+                t?.owner === "humans"
+                  ? activateRoyalBanner(t.id)
+                  : (immersiveSound("invalid"),
+                    navigator.vibrate?.(35),
+                    et("Touche une base alliée"));
+                return;
+              }
               t?.owner === "humans" &&
                 (e.currentTarget.setPointerCapture(e.pointerId),
                 (x.current = t.id),
@@ -1930,6 +2087,24 @@ export default function Game() {
                       }),
                     ],
                   }),
+                  6 === missionIntro.id &&
+                    (0, r.jsxs)("div", {
+                      className: "intro-power",
+                      children: [
+                        (0, r.jsx)("span", { children: "♛" }),
+                        (0, r.jsxs)("p", {
+                          children: [
+                            (0, r.jsx)("small", {
+                              children: "NOUVEAU POUVOIR",
+                            }),
+                            (0, r.jsx)("b", {
+                              children: "La Bannière du Roi",
+                            }),
+                            "Une fois la jauge pleine, rallie 25 % des garnisons voisines et accélère la production de la base choisie.",
+                          ],
+                        }),
+                      ],
+                    }),
                   (0, r.jsxs)("div", {
                     className: "intro-actions",
                     children: [
@@ -1980,6 +2155,54 @@ export default function Game() {
                     }),
                   ],
                 }),
+                O >= 6 &&
+                  (0, r.jsxs)("div", {
+                    className: `command-power ${commandUi.targeting ? "targeting" : ""} ${commandUi.charge >= 100 ? "ready" : ""}`,
+                    children: [
+                      (0, r.jsxs)("div", {
+                        className: "command-meter",
+                        children: [
+                          (0, r.jsxs)("span", {
+                            children: [
+                              (0, r.jsx)("small", {
+                                children: "COMMANDEMENT",
+                              }),
+                              (0, r.jsx)("b", {
+                                children: commandUi.active
+                                  ? `Bannière active · ${commandUi.active}s`
+                                  : commandUi.targeting
+                                    ? "Choisis une base alliée"
+                                    : commandUi.charge >= 100
+                                      ? "Bannière prête"
+                                      : `${Math.floor(commandUi.charge)} %`,
+                              }),
+                            ],
+                          }),
+                          (0, r.jsx)("i", {
+                            children: (0, r.jsx)("em", {
+                              style: {
+                                width: `${Math.min(100, commandUi.charge)}%`,
+                              },
+                            }),
+                          }),
+                        ],
+                      }),
+                      (0, r.jsxs)("button", {
+                        onClick: beginPowerTargeting,
+                        disabled:
+                          commandUi.charge < 100 && !commandUi.targeting,
+                        "aria-label": "Bannière du Roi",
+                        children: [
+                          (0, r.jsx)("strong", { children: "♛" }),
+                          (0, r.jsx)("small", {
+                            children: commandUi.targeting
+                              ? "ANNULER"
+                              : "BANNIÈRE",
+                          }),
+                        ],
+                      }),
+                    ],
+                  }),
                 eh &&
                   "playing" === E &&
                   (0, r.jsxs)("div", {
@@ -2111,6 +2334,14 @@ export default function Game() {
                             children: "Ravitaillement",
                           }),
                           "Crée une ligne automatique entre deux positions alliées.",
+                        ],
+                      }),
+                      (0, r.jsxs)("p", {
+                        children: [
+                          (0, r.jsx)("b", {
+                            children: "Bannière du Roi",
+                          }),
+                          "Dès la mission 6, remplis la jauge en combattant et en capturant. Cible une base alliée pour y rallier 25 % des garnisons voisines et accélérer sa production pendant 8 secondes.",
                         ],
                       }),
                     ],

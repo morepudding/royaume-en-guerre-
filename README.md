@@ -10,6 +10,7 @@ Cette version contient :
 - des scènes d'introduction narratives pour les missions 6 à 15 ;
 - des terrains, routes, armées, forteresses et impacts retravaillés ;
 - une interface de bataille plus discrète qui préserve le champ de jeu ;
+- la Bannière du Roi à partir de la mission 6, alimentée par les captures et les victoires sur les routes ;
 - une interface pensée pour le mobile et le mode paysage ;
 - une progression sauvegardée localement dans le navigateur.
 
