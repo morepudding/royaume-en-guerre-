@@ -9,6 +9,9 @@ This repository is the source of truth for **Royaume en Guerre**.
 - Campaign: 15 missions
 - Mobile troop selector: `¼`, `½`, `TOUT`
 - Opposing armies fight when they meet on a road
+- Missions 6–15 open with a dedicated narrative scene before gameplay
+- Battle HUD text is deliberately kept at the edges of the canvas
+- Terrain, moving armies and collision effects are rendered procedurally on canvas
 - Browser progression key: `royaumes-campaign-v1`
 
 ## Code map
