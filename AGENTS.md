@@ -16,6 +16,10 @@ This repository is the source of truth for **Royaume en Guerre**.
 - Command fills passively and gains bonuses from human captures and road-battle victories
 - At full command, the player targets a human base: directly connected human bases send 25% and the target gains +65% production for 8 seconds
 - Orc AI telegraphs planned assaults, coordinated attacks, reinforcements and neutral expansion before executing them
+- Product shell: animated title screen, continue action and progression summary
+- Campaign navigation: three acts, connected mission nodes and detailed pre-battle sheets
+- Mission sheets expose the objective, special rule and all three crown conditions before launch
+- Battle results include crowns, duration, surviving positions, soldiers and the next unlocked front
 - Browser progression key: `royaumes-campaign-v1`
 
 ## Code map

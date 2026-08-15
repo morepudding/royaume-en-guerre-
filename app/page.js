@@ -641,7 +641,7 @@ export default function Game() {
     f = (0, t.useRef)([]),
     h = (0, t.useRef)(s[0]),
     g = (0, t.useRef)("playing"),
-    p = (0, t.useRef)("campaign"),
+    p = (0, t.useRef)("home"),
     v = (0, t.useRef)(0.5),
     b = (0, t.useRef)(!1),
     x = (0, t.useRef)(null),
@@ -674,7 +674,7 @@ export default function Game() {
       village: null,
       fortress: null,
     }),
-    [P, A] = (0, t.useState)("campaign"),
+    [P, A] = (0, t.useState)("home"),
     [E, I] = (0, t.useState)("playing"),
     [O, q] = (0, t.useState)(1),
     [D, U] = (0, t.useState)(0.5),
@@ -687,6 +687,8 @@ export default function Game() {
     [Y, Z] = (0, t.useState)({ humans: 0, orcs: 0, time: 0 }),
     [_, ee] = (0, t.useState)({ unlocked: 1, crowns: {} }),
     [missionIntro, setMissionIntro] = (0, t.useState)(null),
+    [selectedMission, setSelectedMission] = (0, t.useState)(null),
+    [battleReport, setBattleReport] = (0, t.useState)(null),
     [commandUi, setCommandUi] = (0, t.useState)({
       charge: 0,
       targeting: !1,
@@ -850,32 +852,42 @@ export default function Game() {
     }, []),
     ea = (0, t.useCallback)(
       (e) => {
-        if (
-          "playing" === g.current &&
-          ((g.current = e),
+        if ("playing" !== g.current) return;
+        let r = h.current,
+          t = k.current,
+          a = Math.floor(T.current),
+          l = "won" === e,
+          o = l ? 1 + +(T.current <= r.par) + +!t.lostHumanBase : 0,
+          u = n.current.filter((e) => "humans" === e.owner),
+          c = Math.floor(u.reduce((e, r) => e + r.units, 0));
+        ((g.current = e),
           I(e),
-          er("won" === e ? 880 : 130, 0.35, 0.06),
-          immersiveSound("won" === e ? "victory" : "defeat"),
-          (battleFx.current.shake = "won" === e ? 5 : 12),
+          setBattleReport({
+            outcome: e,
+            time: a,
+            par: r.par,
+            crowns: o,
+            bases: u.length,
+            troops: c,
+            keptEveryBase: !t.lostHumanBase,
+          }),
+          er(l ? 880 : 130, 0.35, 0.06),
+          immersiveSound(l ? "victory" : "defeat"),
+          (battleFx.current.shake = l ? 5 : 12),
           (battleFx.current.flash = 0.65),
-          (battleFx.current.color = "won" === e ? "242,196,93" : "232,93,72"),
-          navigator.vibrate?.("won" === e ? [35, 45, 70] : [90, 40, 120]),
-          "won" === e)
-        ) {
-          let e = h.current,
-            r = k.current,
-            t = 1 + +(T.current <= e.par) + +!r.lostHumanBase;
-          ee((r) => {
-            let n = {
-              unlocked: Math.max(r.unlocked, Math.min(15, e.id + 1)),
+          (battleFx.current.color = l ? "242,196,93" : "232,93,72"),
+          navigator.vibrate?.(l ? [35, 45, 70] : [90, 40, 120]));
+        if (l)
+          ee((e) => {
+            let t = {
+              unlocked: Math.max(e.unlocked, Math.min(15, r.id + 1)),
               crowns: {
-                ...r.crowns,
-                [e.id]: Math.max(r.crowns[e.id] || 0, t),
+                ...e.crowns,
+                [r.id]: Math.max(e.crowns[r.id] || 0, o),
               },
             };
-            return (localStorage.setItem(i, JSON.stringify(n)), n);
+            return (localStorage.setItem(i, JSON.stringify(t)), t);
           });
-        }
       },
       [er, immersiveSound],
     ),
@@ -883,6 +895,8 @@ export default function Game() {
       (e) => {
         let r = s[e - 1];
         (setMissionIntro(null),
+          setSelectedMission(null),
+          setBattleReport(null),
           (h.current = r),
           (n.current = u(r)),
           (d.current = []),
@@ -936,9 +950,9 @@ export default function Game() {
     openMission = (0, t.useCallback)(
       (e) => {
         let r = s[e - 1];
-        r.id >= 6 ? setMissionIntro(r) : el(e);
+        (A("campaign"), setSelectedMission(r));
       },
-      [el],
+      [],
     ),
     gainCommand = (0, t.useCallback)((e) => {
       if (h.current.id < 6 || e <= 0) return;
@@ -2243,16 +2257,30 @@ export default function Game() {
           I("playing"));
     },
     ef = s[O - 1],
-    eh = c[O]?.[Q];
+    eh = c[O]?.[Q],
+    totalCrowns = Object.values(_.crowns).reduce((e, r) => e + r, 0),
+    campaignActs = [
+      { id: "I", title: "Les armes du royaume", missions: s.slice(0, 5) },
+      { id: "II", title: "La Horde déferle", missions: s.slice(5, 10) },
+      { id: "III", title: "La guerre des couronnes", missions: s.slice(10, 15) },
+    ],
+    formatTime = (e) =>
+      `${Math.floor(e / 60)}:${String(e % 60).padStart(2, "0")}`,
+    launchMission = (e) => {
+      setSelectedMission(null);
+      e.id >= 6 ? setMissionIntro(e) : el(e.id);
+    };
   return (0, r.jsxs)("main", {
-    className: "game-shell",
+    className: `game-shell screen-${P}`,
     children: [
       (0, r.jsxs)("header", {
         className: "topbar",
         children: [
           (0, r.jsxs)("button", {
             className: "brand",
-            onClick: () => A("campaign"),
+            onClick: () => {
+              (A("home"), setMissionIntro(null), setSelectedMission(null));
+            },
             children: [
               (0, r.jsx)("span", { className: "crest", children: "♜" }),
               (0, r.jsxs)("span", {
@@ -2277,6 +2305,8 @@ export default function Game() {
               (0, r.jsx)("em", {
                 children: "battle" === P ? ef.name : "CAMPAGNE",
               }),
+              "battle" === P &&
+                (0, r.jsx)("time", { children: formatTime(Y.time) }),
               (0, r.jsxs)("span", {
                 children: [(0, r.jsx)("i", { className: "orc-dot" }), Y.orcs],
               }),
@@ -2338,6 +2368,84 @@ export default function Game() {
             onPointerUp: ed,
             onPointerCancel: ed,
           }),
+          "home" === P &&
+            (0, r.jsxs)("div", {
+              className: "home-screen",
+              children: [
+                (0, r.jsxs)("div", {
+                  className: "home-sigils",
+                  children: [
+                    (0, r.jsx)("i", {}),
+                    (0, r.jsx)("i", {}),
+                    (0, r.jsx)("i", {}),
+                  ],
+                }),
+                (0, r.jsxs)("div", {
+                  className: "home-hero",
+                  children: [
+                    (0, r.jsx)("div", {
+                      className: "home-standard",
+                      children: "♜",
+                    }),
+                    (0, r.jsx)("small", { children: "CHRONIQUES DU ROYAUME" }),
+                    (0, r.jsx)("h1", { children: "Royaumes en Guerre" }),
+                    (0, r.jsx)("p", {
+                      children:
+                        "Commande les garnisons du Roi. Brise la Horde. Reprends les quinze territoires avant l’aube rouge.",
+                    }),
+                    (0, r.jsxs)("div", {
+                      className: "home-progress",
+                      children: [
+                        (0, r.jsxs)("span", {
+                          children: [
+                            (0, r.jsx)("b", { children: `${_.unlocked}/15` }),
+                            (0, r.jsx)("small", { children: "FRONTS OUVERTS" }),
+                          ],
+                        }),
+                        (0, r.jsxs)("span", {
+                          children: [
+                            (0, r.jsx)("b", { children: totalCrowns }),
+                            (0, r.jsx)("small", { children: "COURONNES" }),
+                          ],
+                        }),
+                      ],
+                    }),
+                    (0, r.jsxs)("div", {
+                      className: "home-actions",
+                      children: [
+                        (0, r.jsxs)("button", {
+                          className: "primary-button home-continue",
+                          onClick: () => openMission(_.unlocked),
+                          children: [
+                            (0, r.jsx)("span", {
+                              children: _.unlocked > 1 ? "CONTINUER" : "COMMENCER",
+                            }),
+                            (0, r.jsx)("small", {
+                              children: `Mission ${String(_.unlocked).padStart(2, "0")} · ${s[_.unlocked - 1].name}`,
+                            }),
+                          ],
+                        }),
+                        (0, r.jsx)("button", {
+                          className: "secondary-button",
+                          onClick: () => A("campaign"),
+                          children: "Carte de campagne",
+                        }),
+                        (0, r.jsx)("button", {
+                          className: "home-icon-button",
+                          onClick: () => F((e) => !e),
+                          "aria-label": "Son",
+                          children: H ? "SON COUPÉ" : "SON ACTIF",
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+                (0, r.jsx)("span", {
+                  className: "home-footnote",
+                  children: "UNE CAMPAGNE TACTIQUE EN QUINZE BATAILLES",
+                }),
+              ],
+            }),
           "campaign" === P &&
             (0, r.jsxs)("div", {
               className: "campaign-overlay",
@@ -2345,49 +2453,149 @@ export default function Game() {
                 (0, r.jsxs)("div", {
                   className: "campaign-head",
                   children: [
-                    (0, r.jsx)("p", {
-                      children: "LA GUERRE DES DEUX PEUPLES",
+                    (0, r.jsx)("button", {
+                      className: "campaign-back",
+                      onClick: () => A("home"),
+                      children: "‹ ACCUEIL",
                     }),
-                    (0, r.jsx)("h1", { children: "La campagne" }),
-                    (0, r.jsx)("span", {
-                      children:
-                        "Quinze champs de bataille. Cinq leçons, puis dix défis qui changent les règles.",
+                    (0, r.jsxs)("div", {
+                      children: [
+                        (0, r.jsx)("p", {
+                          children: "LA GUERRE DES DEUX PEUPLES",
+                        }),
+                        (0, r.jsx)("h1", { children: "Carte de campagne" }),
+                      ],
+                    }),
+                    (0, r.jsxs)("div", {
+                      className: "campaign-tally",
+                      children: [
+                        (0, r.jsx)("b", { children: totalCrowns }),
+                        (0, r.jsx)("span", { children: "♛ SUR 45" }),
+                      ],
                     }),
                   ],
                 }),
                 (0, r.jsx)("div", {
-                  className: "mission-grid",
-                  children: s.map((e) => {
-                    let t = e.id > _.unlocked,
-                      n = _.crowns[e.id] || 0;
-                    return (0, r.jsxs)(
-                      "button",
+                  className: "campaign-route",
+                  children: campaignActs.map((e) =>
+                    (0, r.jsxs)(
+                      "section",
                       {
-                        disabled: t,
-                        className: `mission-card ${t ? "locked" : ""}`,
-                        onClick: () => openMission(e.id),
+                        className: "campaign-act",
                         children: [
-                          (0, r.jsx)("span", {
-                            className: "mission-number",
-                            children: String(e.id).padStart(2, "0"),
+                          (0, r.jsxs)("header", {
+                            children: [
+                              (0, r.jsx)("span", { children: `ACTE ${e.id}` }),
+                              (0, r.jsx)("strong", { children: e.title }),
+                            ],
                           }),
-                          (0, r.jsx)("small", { children: e.region }),
-                          (0, r.jsx)("strong", { children: e.name }),
-                          (0, r.jsx)("p", {
-                            children: t ? "Mission verrouillée" : e.objective,
-                          }),
-                          (0, r.jsx)("em", {
-                            children: t
-                              ? "◆"
-                              : `${"♛".repeat(n)}${"·".repeat(3 - n)}`,
+                          (0, r.jsx)("div", {
+                            className: "mission-track",
+                            children: e.missions.map((e) => {
+                              let t = e.id > _.unlocked,
+                                n = _.crowns[e.id] || 0;
+                              return (0, r.jsxs)(
+                                "button",
+                                {
+                                  disabled: t,
+                                  className: `mission-node ${t ? "locked" : ""} ${e.id === _.unlocked ? "current" : ""} ${n ? "complete" : ""}`,
+                                  onClick: () => setSelectedMission(e),
+                                  children: [
+                                    (0, r.jsx)("span", {
+                                      className: "node-medallion",
+                                      children: t
+                                        ? "◆"
+                                        : String(e.id).padStart(2, "0"),
+                                    }),
+                                    (0, r.jsx)("strong", { children: e.name }),
+                                    (0, r.jsx)("em", {
+                                      children: t
+                                        ? "VERROUILLÉE"
+                                        : `${"♛".repeat(n)}${"·".repeat(3 - n)}`,
+                                    }),
+                                  ],
+                                },
+                                e.id,
+                              );
+                            }),
                           }),
                         ],
                       },
                       e.id,
-                    );
-                  }),
+                    ),
+                  ),
                 }),
               ],
+            }),
+          selectedMission &&
+            (0, r.jsx)("div", {
+              className: `mission-sheet terrain-${selectedMission.terrain}`,
+              children: (0, r.jsxs)("div", {
+                className: "mission-sheet-card",
+                children: [
+                  (0, r.jsx)("button", {
+                    className: "sheet-close",
+                    onClick: () => setSelectedMission(null),
+                    "aria-label": "Fermer",
+                    children: "×",
+                  }),
+                  (0, r.jsxs)("div", {
+                    className: "sheet-identity",
+                    children: [
+                      (0, r.jsx)("span", {
+                        className: "sheet-number",
+                        children: String(selectedMission.id).padStart(2, "0"),
+                      }),
+                      (0, r.jsx)("small", { children: selectedMission.region }),
+                      (0, r.jsx)("h2", { children: selectedMission.name }),
+                      (0, r.jsx)("p", { children: selectedMission.briefing }),
+                    ],
+                  }),
+                  (0, r.jsxs)("div", {
+                    className: "sheet-orders",
+                    children: [
+                      (0, r.jsx)("small", { children: "ORDRE DE BATAILLE" }),
+                      (0, r.jsx)("h3", { children: selectedMission.objective }),
+                      (0, r.jsx)("p", {
+                        children:
+                          missionScenes[selectedMission.id]?.rule ||
+                          `${selectedMission.lesson} · Mission de conquête`,
+                      }),
+                      (0, r.jsxs)("div", {
+                        className: "crown-conditions",
+                        children: [
+                          ["♛", "Remporter la bataille", !0],
+                          ["♛", `Terminer avant ${formatTime(selectedMission.par)}`, !1],
+                          ["♛", "Ne perdre aucune position", !1],
+                        ].map((e, t) =>
+                          (0, r.jsxs)(
+                            "span",
+                            {
+                              className:
+                                (_.crowns[selectedMission.id] || 0) > t
+                                  ? "earned"
+                                  : "",
+                              children: [
+                                (0, r.jsx)("b", { children: e[0] }),
+                                e[1],
+                              ],
+                            },
+                            e[1],
+                          ),
+                        ),
+                      }),
+                      (0, r.jsx)("button", {
+                        className: "primary-button",
+                        onClick: () => launchMission(selectedMission),
+                        children:
+                          (_.crowns[selectedMission.id] || 0) > 0
+                            ? "Rejouer cette mission"
+                            : "Partir au combat",
+                      }),
+                    ],
+                  }),
+                ],
+              }),
             }),
           missionIntro &&
             (0, r.jsx)("div", {
@@ -2469,8 +2677,13 @@ export default function Game() {
                 (0, r.jsxs)("div", {
                   className: "objective-chip",
                   children: [
-                    (0, r.jsx)("span", { children: "OBJECTIF" }),
-                    (0, r.jsx)("b", { children: z }),
+                    (0, r.jsx)("span", { children: `MISSION ${String(O).padStart(2, "0")}` }),
+                    (0, r.jsxs)("b", {
+                      children: [
+                        (0, r.jsx)("i", { children: "◆" }),
+                        z,
+                      ],
+                    }),
                   ],
                 }),
                 (0, r.jsxs)("div", {
@@ -2586,35 +2799,111 @@ export default function Game() {
                   (0, r.jsx)("div", {
                     className: "modal-overlay result",
                     children: (0, r.jsxs)("div", {
+                      className: `result-panel ${E}`,
                       children: [
+                        (0, r.jsx)("div", {
+                          className: "result-seal",
+                          children: "won" === E ? "♛" : "☠",
+                        }),
                         (0, r.jsx)("small", {
-                          children: "won" === E ? "VICTOIRE" : "DÉFAITE",
+                          children:
+                            "won" === E ? "TERRITOIRE CONQUIS" : "RAPPORT DE DÉFAITE",
                         }),
                         (0, r.jsx)("h2", {
                           children:
                             "won" === E
-                              ? "Le royaume avance"
-                              : "La Horde l’emporte",
+                              ? ef.name
+                              : "La ligne a cédé",
                         }),
-                        "won" === E &&
-                          (0, r.jsx)("p", {
-                            children: "♛".repeat(_.crowns[O] || 1),
-                          }),
-                        (0, r.jsx)("button", {
-                          className: "primary-button",
-                          onClick: () =>
-                            "won" === E && O < 15
-                              ? openMission(O + 1)
-                              : el(O),
+                        (0, r.jsx)("p", {
+                          className: "result-subtitle",
                           children:
-                            "won" === E && O < 15
-                              ? "Mission suivante"
-                              : "Rejouer",
+                            "won" === E
+                              ? "Le Roi inscrit cette victoire dans les chroniques."
+                              : "La Horde tient encore le terrain. Réorganise tes ordres et frappe à nouveau.",
                         }),
-                        (0, r.jsx)("button", {
-                          className: "secondary-button",
-                          onClick: () => A("campaign"),
-                          children: "Carte de campagne",
+                        (0, r.jsx)("div", {
+                          className: "result-crowns",
+                          children: [0, 1, 2].map((e) =>
+                            (0, r.jsxs)(
+                              "span",
+                              {
+                                className:
+                                  (battleReport?.crowns || 0) > e ? "earned" : "",
+                                children: [
+                                  (0, r.jsx)("b", { children: "♛" }),
+                                  (0, r.jsx)("small", {
+                                    children:
+                                      0 === e
+                                        ? "VICTOIRE"
+                                        : 1 === e
+                                          ? "RAPIDITÉ"
+                                          : "MAÎTRISE",
+                                  }),
+                                ],
+                              },
+                              e,
+                            ),
+                          ),
+                        }),
+                        (0, r.jsxs)("div", {
+                          className: "result-stats",
+                          children: [
+                            (0, r.jsxs)("span", {
+                              children: [
+                                (0, r.jsx)("small", { children: "DURÉE" }),
+                                (0, r.jsx)("b", {
+                                  children: formatTime(battleReport?.time || 0),
+                                }),
+                              ],
+                            }),
+                            (0, r.jsxs)("span", {
+                              children: [
+                                (0, r.jsx)("small", { children: "POSITIONS" }),
+                                (0, r.jsx)("b", {
+                                  children: battleReport?.bases || 0,
+                                }),
+                              ],
+                            }),
+                            (0, r.jsxs)("span", {
+                              children: [
+                                (0, r.jsx)("small", { children: "SOLDATS" }),
+                                (0, r.jsx)("b", {
+                                  children: battleReport?.troops || 0,
+                                }),
+                              ],
+                            }),
+                          ],
+                        }),
+                        "won" === E && O < 15 &&
+                          (0, r.jsxs)("div", {
+                            className: "unlock-banner",
+                            children: [
+                              (0, r.jsx)("span", { children: "NOUVEAU FRONT" }),
+                              (0, r.jsx)("b", { children: s[O].name }),
+                              (0, r.jsx)("small", { children: s[O].region }),
+                            ],
+                          }),
+                        (0, r.jsxs)("div", {
+                          className: "result-actions",
+                          children: [
+                            (0, r.jsx)("button", {
+                              className: "primary-button",
+                              onClick: () =>
+                                "won" === E && O < 15
+                                  ? openMission(O + 1)
+                                  : el(O),
+                              children:
+                                "won" === E && O < 15
+                                  ? "Préparer la mission suivante"
+                                  : "Rejouer",
+                            }),
+                            (0, r.jsx)("button", {
+                              className: "secondary-button",
+                              onClick: () => A("campaign"),
+                              children: "Carte de campagne",
+                            }),
+                          ],
                         }),
                       ],
                     }),
