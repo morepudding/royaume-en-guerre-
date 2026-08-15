@@ -1,0 +1,10 @@
+{
+  "name": "Royaumes en Guerre",
+  "short_name": "Royaumes",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#07100c",
+  "theme_color": "#07100c",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
