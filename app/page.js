@@ -627,6 +627,12 @@ let n = (e, r, t, n, s, a, l, i) => ({
     },
   };
 
+const mission2AssetSources = {
+  map: "/assets/mission-2/river-diorama.webp",
+  village: "/assets/mission-2/village.png",
+  fortress: "/assets/mission-2/fortress.png",
+};
+
 export default function Game() {
   let e = (0, t.useRef)(null),
     n = (0, t.useRef)(u(s[0])),
@@ -659,6 +665,11 @@ export default function Game() {
     }),
     audioEngine = (0, t.useRef)(null),
     battleFx = (0, t.useRef)({ shake: 0, flash: 0, color: "242,196,93" }),
+    mission2Art = (0, t.useRef)({
+      map: null,
+      village: null,
+      fortress: null,
+    }),
     [P, A] = (0, t.useState)("campaign"),
     [E, I] = (0, t.useState)("playing"),
     [O, q] = (0, t.useState)(1),
@@ -721,6 +732,20 @@ export default function Game() {
       },
       [],
     ));
+  (0, t.useEffect)(() => {
+    let cancelled = !1;
+    for (let [key, source] of Object.entries(mission2AssetSources)) {
+      let image = new Image();
+      image.decoding = "async";
+      image.onload = () => {
+        if (!cancelled) mission2Art.current[key] = image;
+      };
+      image.src = source;
+    }
+    return () => {
+      cancelled = !0;
+    };
+  }, []);
   let er = (0, t.useCallback)((e, r = 0.07, t = 0.035) => {
       if (!N.current)
         try {
@@ -1401,7 +1426,31 @@ export default function Game() {
           }),
           K(es()));
       }
-      let terrainColors = {
+      let mission2Map = 2 === L.id ? mission2Art.current.map : null;
+      if (mission2Map?.complete && mission2Map.naturalWidth) {
+        let scale = Math.max(
+            o / mission2Map.naturalWidth,
+            c / mission2Map.naturalHeight,
+          ),
+          sourceWidth = o / scale,
+          sourceHeight = c / scale,
+          sourceX = (mission2Map.naturalWidth - sourceWidth) / 2,
+          sourceY = (mission2Map.naturalHeight - sourceHeight) / 2;
+        (t.drawImage(
+          mission2Map,
+          sourceX,
+          sourceY,
+          sourceWidth,
+          sourceHeight,
+          0,
+          0,
+          o,
+          c,
+        ),
+          (t.fillStyle = "rgba(4,9,6,.12)"),
+          t.fillRect(0, 0, o, c));
+      } else {
+        let terrainColors = {
           plain: ["#294c31", "#193523", "#34291b"],
           valley: ["#315039", "#183326", "#3d2d1f"],
           mountains: ["#303b32", "#1d2d27", "#46352d"],
@@ -1500,6 +1549,7 @@ export default function Game() {
         (t.fillStyle = vignette),
         t.fillRect(0, 0, o, c),
         t.restore());
+      }
       let E = (e) => 24 + e.x * b,
         I = (e) => 44 + e.y * M;
       for (let [e, r] of L.roads) {
@@ -1510,20 +1560,36 @@ export default function Game() {
             P.bridge < (L.target || 40) &&
             ((e === L.lockedRoad[0] && r === L.lockedRoad[1]) ||
               (r === L.lockedRoad[0] && e === L.lockedRoad[1]));
-        (t.beginPath(),
-          t.moveTo(E(s), I(s)),
-          t.lineTo(E(a), I(a)),
-          (t.strokeStyle = "rgba(4,8,6,.48)"),
-          (t.lineWidth = l ? 8 : 7),
-          t.stroke(),
-          t.beginPath(),
-          t.moveTo(E(s), I(s)),
-          t.lineTo(E(a), I(a)),
-          (t.strokeStyle = l ? "rgba(232,93,72,.55)" : "rgba(218,197,151,.28)"),
-          (t.lineWidth = l ? 4 : 3),
-          t.setLineDash(l ? [5, 8] : []),
-          t.stroke(),
-          t.setLineDash([]));
+        if (2 === L.id && !l) {
+          (t.beginPath(),
+            t.moveTo(E(s), I(s)),
+            t.lineTo(E(a), I(a)),
+            (t.strokeStyle = "rgba(42,30,16,.62)"),
+            (t.lineWidth = 8),
+            t.stroke(),
+            t.beginPath(),
+            t.moveTo(E(s), I(s)),
+            t.lineTo(E(a), I(a)),
+            (t.strokeStyle = "rgba(222,195,132,.68)"),
+            (t.lineWidth = 3),
+            t.stroke());
+        } else
+          (t.beginPath(),
+            t.moveTo(E(s), I(s)),
+            t.lineTo(E(a), I(a)),
+            (t.strokeStyle = "rgba(4,8,6,.48)"),
+            (t.lineWidth = l ? 8 : 7),
+            t.stroke(),
+            t.beginPath(),
+            t.moveTo(E(s), I(s)),
+            t.lineTo(E(a), I(a)),
+            (t.strokeStyle = l
+              ? "rgba(232,93,72,.55)"
+              : "rgba(218,197,151,.28)"),
+            (t.lineWidth = l ? 4 : 3),
+            t.setLineDash(l ? [5, 8] : []),
+            t.stroke(),
+            t.setLineDash([]));
       }
       for (let e of m.current) {
         let r = n.current[e.from],
@@ -1680,6 +1746,49 @@ export default function Game() {
           isBannered =
             commandPower.current.buffBaseId === e.id &&
             T.current < commandPower.current.buffUntil;
+        let mission2Sprite =
+          2 === L.id &&
+          ["village", "fortress"].includes(e.kind) &&
+          mission2Art.current[e.kind];
+        if (mission2Sprite?.complete && mission2Sprite.naturalWidth) {
+          let scale = Math.max(0.72, Math.min(1, c / 460)),
+            spriteWidth = ("fortress" === e.kind ? 104 : 84) * scale,
+            spriteHeight = spriteWidth * (320 / 384),
+            labelY = n + 0.38 * spriteHeight;
+          (t.save(),
+            (t.shadowColor = i.glow),
+            (t.shadowBlur =
+              o || u || isPowerTarget || isBannered ? 24 : 13),
+            t.beginPath(),
+            t.arc(r, n, 0.48 * spriteWidth, 0, 7),
+            (t.fillStyle = "rgba(7,11,8,.76)"),
+            t.fill(),
+            (t.strokeStyle =
+              u || isPowerTarget || isBannered ? "#fff4d0" : i.main),
+            (t.lineWidth = o || u || isPowerTarget || isBannered ? 4 : 3),
+            t.stroke(),
+            (t.shadowBlur = 0),
+            t.drawImage(
+              mission2Sprite,
+              r - spriteWidth / 2,
+              n - 0.54 * spriteHeight,
+              spriteWidth,
+              spriteHeight,
+            ),
+            t.beginPath(),
+            t.roundRect(r - 18, labelY - 10, 36, 20, 10),
+            (t.fillStyle = "rgba(5,8,7,.94)"),
+            t.fill(),
+            (t.strokeStyle = i.main),
+            (t.lineWidth = 1.5),
+            t.stroke(),
+            (t.fillStyle = "#fff8e8"),
+            (t.font = "900 12px var(--font-geist)"),
+            (t.textAlign = "center"),
+            t.fillText(String(Math.floor(e.units)), r, labelY + 4),
+            t.restore());
+          continue;
+        }
         if (
           (t.save(),
           (t.shadowColor = i.glow),
