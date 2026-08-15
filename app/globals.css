@@ -244,6 +244,151 @@ canvas {
   margin-left: 3px;
   font-size: 8px;
 }
+.development-panel {
+  z-index: 4;
+  width: min(580px, 66%);
+  color: #eee6d4;
+  background: linear-gradient(145deg, #0d1713f5, #050a08fa);
+  border: 1px solid #f2c45d70;
+  border-radius: 14px;
+  padding: 9px;
+  position: absolute;
+  bottom: 57px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 14px 45px #000000a6, inset 0 1px #ffffff12;
+}
+.development-panel header {
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px 7px;
+  display: flex;
+}
+.development-panel header span {
+  min-width: 0;
+}
+.development-panel header small {
+  color: #a09b89;
+  letter-spacing: 0.15em;
+  font-size: 6px;
+  font-weight: 900;
+  display: block;
+}
+.development-panel header strong {
+  font-family: var(--font-cinzel), serif;
+  color: #fff2cf;
+  font-size: 13px;
+  display: block;
+}
+.development-close {
+  width: 25px;
+  height: 25px;
+  color: #d9d2c2;
+  cursor: pointer;
+  background: #ffffff0a;
+  border: 1px solid #ffffff1a;
+  border-radius: 7px;
+  flex: 0 0 25px;
+}
+.development-options {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  display: grid;
+}
+.development-options.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.development-options > button {
+  min-width: 0;
+  color: #eee7d5;
+  cursor: pointer;
+  background: linear-gradient(#ffffff0d, #ffffff05);
+  border: 1px solid #ffffff18;
+  border-radius: 10px;
+  grid-template-columns: 25px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 48px;
+  padding: 6px 8px;
+  text-align: left;
+  display: grid;
+}
+.development-options > button:hover,
+.development-options > button:active {
+  background: #f2c45d17;
+  border-color: #f2c45d80;
+}
+.development-options > button:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+.development-options > button > i {
+  color: var(--gold);
+  font-size: 19px;
+  font-style: normal;
+  text-align: center;
+}
+.development-options span,
+.development-options strong,
+.development-options small {
+  min-width: 0;
+  display: block;
+}
+.development-options strong {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 9px;
+  overflow: hidden;
+}
+.development-options small {
+  color: #9da69f;
+  margin-top: 2px;
+  font-size: 7px;
+}
+.development-options em {
+  color: #f6ce73;
+  background: #f2c45d12;
+  border-radius: 999px;
+  padding: 3px 5px;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+}
+.construction-progress,
+.development-complete {
+  background: #ffffff08;
+  border: 1px solid #ffffff12;
+  border-radius: 9px;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 5px 10px;
+  padding: 9px 11px;
+  display: grid;
+}
+.construction-progress b,
+.development-complete b {
+  color: #fff0ba;
+  font-size: 10px;
+}
+.construction-progress span,
+.development-complete span {
+  color: #abb2ac;
+  font-size: 8px;
+}
+.construction-progress > i {
+  background: #ffffff0c;
+  border-radius: 99px;
+  grid-column: 1 / -1;
+  height: 5px;
+  overflow: hidden;
+}
+.construction-progress > i > em {
+  background: linear-gradient(90deg, #9c6429, #f2c45d, #fff0a8);
+  border-radius: inherit;
+  height: 100%;
+  display: block;
+}
 .command-power {
   z-index: 2;
   background: #050a08e8;
@@ -863,6 +1008,17 @@ canvas {
   .command-power {
     bottom: 7px;
   }
+  .development-panel {
+    bottom: 49px;
+    padding: 7px;
+  }
+  .development-panel header {
+    padding-bottom: 5px;
+  }
+  .development-options > button {
+    min-height: 42px;
+    padding: 4px 6px;
+  }
   .command-power {
     right: 7px;
     width: min(225px, 36%);
@@ -943,6 +1099,29 @@ canvas {
   }
   .command-power > button strong {
     font-size: 13px;
+  }
+  .development-panel {
+    width: min(540px, 72%);
+    bottom: 43px;
+    padding: 5px;
+  }
+  .development-panel header small,
+  .development-options small {
+    display: none;
+  }
+  .development-panel header {
+    padding-bottom: 3px;
+  }
+  .development-panel header strong {
+    font-size: 10px;
+  }
+  .development-options > button {
+    min-height: 34px;
+    grid-template-columns: 19px minmax(0, 1fr) auto;
+    padding: 3px 5px;
+  }
+  .development-options > button > i {
+    font-size: 14px;
   }
   .objective-chip {
     max-width: 43%;

@@ -15,6 +15,9 @@ This repository is the source of truth for **Royaume en Guerre**.
 - Human campaign power from mission 6: `La Bannière du Roi`
 - Command fills passively and gains bonuses from human captures and road-battle victories
 - At full command, the player targets a human base: directly connected human bases send 25% and the target gains +65% production for 8 seconds
+- From mission 7 onward, ordinary villages and towers start as bonus-free level-I cities
+- A city can become a village, fortress or tower for 10 soldiers, then take one of two branch-specific specializations for 16 soldiers
+- Construction takes time, slows production while active, is cancelled by capture and is also used strategically by the Orc AI
 - Orc AI telegraphs planned assaults, coordinated attacks, reinforcements and neutral expansion before executing them
 - Product shell: animated title screen, continue action and progression summary
 - Campaign navigation: three acts, connected mission nodes and detailed pre-battle sheets
@@ -36,6 +39,8 @@ Mission definitions start near the top of `app/page.js`. The game component star
 The command-power runtime is stored in the `commandPower` ref. UI snapshots use `commandUi`. `gainCommand`, `beginPowerTargeting`, and `activateRoyalBanner` contain the power flow.
 
 The strategic Orc AI runtime is stored in the `orcMind` ref. Its planning and execution run inside the canvas game loop; pending orders are also rendered there as animated red or orange intent arrows.
+
+Building progression is configured in `developmentChoices`. Runtime buildings use `specialization` and `construction`; all production, defense and movement calculations must resolve through `getBaseStats` so specialization bonuses remain consistent.
 
 ## Before publishing
 
