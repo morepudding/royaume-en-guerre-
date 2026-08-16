@@ -769,10 +769,25 @@ const buildingNames = {
 const publicAssetBase =
   "https://raw.githubusercontent.com/morepudding/royaume-en-guerre-/main/public";
 
-const mission2AssetSources = {
-  city: `${publicAssetBase}/assets/mission-2/village.png`,
-  village: `${publicAssetBase}/assets/mission-2/village.png`,
-  fortress: `${publicAssetBase}/assets/mission-2/fortress.png`,
+const buildingAssetSources = {
+  humans: {
+    city: `${publicAssetBase}/assets/mission-2/village.png`,
+    village: `${publicAssetBase}/assets/mission-2/village.png`,
+    fortress: `${publicAssetBase}/assets/mission-2/fortress.png`,
+    tower: `${publicAssetBase}/assets/buildings/human-tower.webp`,
+  },
+  neutral: {
+    city: `${publicAssetBase}/assets/mission-2/village.png`,
+    village: `${publicAssetBase}/assets/mission-2/village.png`,
+    fortress: `${publicAssetBase}/assets/mission-2/fortress.png`,
+    tower: `${publicAssetBase}/assets/buildings/human-tower.webp`,
+  },
+  orcs: {
+    city: `${publicAssetBase}/assets/buildings/orc-village.webp`,
+    village: `${publicAssetBase}/assets/buildings/orc-village.webp`,
+    fortress: `${publicAssetBase}/assets/buildings/orc-fortress.webp`,
+    tower: `${publicAssetBase}/assets/buildings/orc-tower.webp`,
+  },
 };
 
 const missionMapSources = Object.fromEntries(
@@ -1020,10 +1035,7 @@ export default function Game() {
     }),
     audioEngine = (0, t.useRef)(null),
     battleFx = (0, t.useRef)({ shake: 0, flash: 0, color: "242,196,93" }),
-    mission2Art = (0, t.useRef)({
-      village: null,
-      fortress: null,
-    }),
+    buildingArt = (0, t.useRef)({ humans: {}, neutral: {}, orcs: {} }),
     missionMapArt = (0, t.useRef)({}),
     [P, A] = (0, t.useState)("home"),
     [E, I] = (0, t.useState)("playing"),
@@ -1092,14 +1104,16 @@ export default function Game() {
     ));
   (0, t.useEffect)(() => {
     let cancelled = !1;
-    for (let [key, source] of Object.entries(mission2AssetSources)) {
-      let image = new Image();
-      image.crossOrigin = "anonymous";
-      image.decoding = "async";
-      image.onload = () => {
-        if (!cancelled) mission2Art.current[key] = image;
-      };
-      image.src = source;
+    for (let [faction, sources] of Object.entries(buildingAssetSources)) {
+      for (let [kind, source] of Object.entries(sources)) {
+        let image = new Image();
+        image.crossOrigin = "anonymous";
+        image.decoding = "async";
+        image.onload = () => {
+          if (!cancelled) buildingArt.current[faction][kind] = image;
+        };
+        image.src = source;
+      }
     }
     return () => {
       cancelled = !0;
@@ -2230,36 +2244,26 @@ export default function Game() {
             P.bridge < (L.target || 40) &&
             ((e === L.lockedRoad[0] && r === L.lockedRoad[1]) ||
               (r === L.lockedRoad[0] && e === L.lockedRoad[1]));
-        if (2 === L.id && !l) {
-          (t.beginPath(),
-            t.moveTo(E(s), I(s)),
-            t.lineTo(E(a), I(a)),
-            (t.strokeStyle = "rgba(42,30,16,.62)"),
-            (t.lineWidth = 8),
-            t.stroke(),
-            t.beginPath(),
-            t.moveTo(E(s), I(s)),
-            t.lineTo(E(a), I(a)),
-            (t.strokeStyle = "rgba(222,195,132,.68)"),
-            (t.lineWidth = 3),
-            t.stroke());
-        } else
-          (t.beginPath(),
-            t.moveTo(E(s), I(s)),
-            t.lineTo(E(a), I(a)),
-            (t.strokeStyle = "rgba(4,8,6,.48)"),
-            (t.lineWidth = l ? 8 : 7),
-            t.stroke(),
-            t.beginPath(),
-            t.moveTo(E(s), I(s)),
-            t.lineTo(E(a), I(a)),
-            (t.strokeStyle = l
-              ? "rgba(232,93,72,.55)"
-              : "rgba(218,197,151,.28)"),
-            (t.lineWidth = l ? 4 : 3),
-            t.setLineDash(l ? [5, 8] : []),
-            t.stroke(),
-            t.setLineDash([]));
+        (t.save(),
+          (t.lineCap = "round"),
+          (t.lineJoin = "round"),
+          t.beginPath(),
+          t.moveTo(E(s), I(s)),
+          t.lineTo(E(a), I(a)),
+          (t.strokeStyle = l ? "rgba(67,16,13,.74)" : "rgba(31,24,15,.5)"),
+          (t.lineWidth = l ? 7 : 6),
+          t.stroke(),
+          t.beginPath(),
+          t.moveTo(E(s), I(s)),
+          t.lineTo(E(a), I(a)),
+          (t.strokeStyle = l
+            ? "rgba(255,111,91,.72)"
+            : "rgba(225,204,157,.5)"),
+          (t.lineWidth = l ? 2.5 : 1.6),
+          t.setLineDash(l ? [5, 8] : [2, 7]),
+          t.stroke(),
+          t.setLineDash([]),
+          t.restore());
       }
       let pendingOrcPlan = orcMind.current.plan;
       if (pendingOrcPlan) {
@@ -2480,47 +2484,140 @@ export default function Game() {
           isBannered =
             commandPower.current.buffBaseId === e.id &&
             T.current < commandPower.current.buffUntil;
-        let mission2Sprite =
-          2 === L.id &&
-          ["city", "village", "fortress"].includes(e.kind) &&
-          mission2Art.current[e.kind];
-        if (mission2Sprite?.complete && mission2Sprite.naturalWidth) {
-          let scale = Math.max(0.72, Math.min(1, c / 460)),
-            spriteWidth = ("fortress" === e.kind ? 104 : 84) * scale,
-            spriteHeight = spriteWidth * (320 / 384),
-            labelY = n + 0.38 * spriteHeight;
+        let factionArt =
+            "orcs" === e.owner
+              ? buildingArt.current.orcs
+              : "humans" === e.owner
+                ? buildingArt.current.humans
+                : buildingArt.current.neutral,
+          buildingSprite = factionArt[e.kind] || factionArt.city;
+        if (buildingSprite?.complete && buildingSprite.naturalWidth) {
+          let scale = Math.max(0.76, Math.min(1.08, c / 430)),
+            targetWidths = { city: 82, village: 90, fortress: 102, tower: 72 },
+            maxHeights = { city: 72, village: 76, fortress: 88, tower: 102 },
+            spriteWidth = (targetWidths[e.kind] || 82) * scale,
+            spriteHeight =
+              spriteWidth *
+              (buildingSprite.naturalHeight / buildingSprite.naturalWidth),
+            maxHeight = (maxHeights[e.kind] || 76) * scale;
+          if (spriteHeight > maxHeight) {
+            spriteWidth *= maxHeight / spriteHeight;
+            spriteHeight = maxHeight;
+          }
+          let baseY = n + 22 * scale,
+            spriteTop = baseY - spriteHeight,
+            badgeY = baseY + 3,
+            haloPulse = 1 + 0.05 * Math.sin(0.006 * performance.now()),
+            needsFocus = o || u || isPowerTarget || isBannered;
           (t.save(),
-            (t.shadowColor = i.glow),
-            (t.shadowBlur =
-              o || u || isPowerTarget || isBannered ? 24 : 13),
+            (t.shadowColor = "rgba(0,0,0,.8)"),
+            (t.shadowBlur = 13),
+            (t.fillStyle = "rgba(2,5,4,.55)"),
             t.beginPath(),
-            t.arc(r, n, 0.48 * spriteWidth, 0, 7),
-            (t.fillStyle = "rgba(7,11,8,.76)"),
+            t.ellipse(
+              r,
+              baseY - 5,
+              0.39 * spriteWidth,
+              Math.max(6, 0.1 * spriteHeight),
+              0,
+              0,
+              7,
+            ),
             t.fill(),
-            (t.strokeStyle =
-              u || isPowerTarget || isBannered ? "#fff4d0" : i.main),
-            (t.lineWidth = o || u || isPowerTarget || isBannered ? 4 : 3),
-            t.stroke(),
             (t.shadowBlur = 0),
+            needsFocus &&
+              ((t.strokeStyle = u || isPowerTarget ? "#fff4d0" : i.main),
+              (t.lineWidth = u || isPowerTarget ? 3 : 2),
+              (t.shadowColor = i.glow),
+              (t.shadowBlur = 16),
+              t.beginPath(),
+              t.ellipse(
+                r,
+                baseY - 7,
+                0.5 * spriteWidth * haloPulse,
+                Math.max(13, 0.18 * spriteHeight) * haloPulse,
+                0,
+                0,
+                7,
+              ),
+              t.stroke(),
+              (t.shadowBlur = 0)),
+            (t.filter = "neutral" === e.owner ? "grayscale(.68) saturate(.55) brightness(.92)" : "none"),
             t.drawImage(
-              mission2Sprite,
+              buildingSprite,
               r - spriteWidth / 2,
-              n - 0.54 * spriteHeight,
+              spriteTop,
               spriteWidth,
               spriteHeight,
             ),
+            (t.filter = "none"),
+            e.construction &&
+              ((t.strokeStyle = "#fff0a8"),
+              (t.lineWidth = 3),
+              t.beginPath(),
+              t.arc(
+                r,
+                n,
+                0.48 * spriteWidth,
+                -Math.PI / 2,
+                -Math.PI / 2 +
+                  Math.PI *
+                    2 *
+                    Math.min(
+                      1,
+                      (T.current - e.construction.startedAt) /
+                        (e.construction.finishAt - e.construction.startedAt),
+                    ),
+              ),
+              t.stroke()),
             t.beginPath(),
-            t.roundRect(r - 18, labelY - 10, 36, 20, 10),
-            (t.fillStyle = "rgba(5,8,7,.94)"),
+            t.roundRect(r - 19, badgeY - 10, 38, 20, 10),
+            (t.fillStyle = "rgba(4,8,6,.94)"),
             t.fill(),
-            (t.strokeStyle = i.main),
-            (t.lineWidth = 1.5),
+            (t.strokeStyle = "neutral" === e.owner ? "#a8a79b" : i.main),
+            (t.lineWidth = 1.4),
             t.stroke(),
             (t.fillStyle = "#fff8e8"),
             (t.font = "900 12px var(--font-geist)"),
             (t.textAlign = "center"),
-            t.fillText(String(Math.floor(e.units)), r, labelY + 4),
-            t.restore());
+            t.fillText(String(Math.floor(e.units)), r, badgeY + 4));
+          if (e.special) {
+            let specialLabels = {
+              source: "∞ SOURCE",
+              seal: "RUNE",
+              boss: "BOSS",
+              exit: "SORTIE",
+              worksite: "PONT",
+              relic: "COURONNE",
+            },
+              label = specialLabels[e.special];
+            ((t.font = "900 8px var(--font-geist)"),
+              (t.textAlign = "center"),
+              (t.fillStyle = "rgba(4,8,6,.82)"),
+              t.beginPath(),
+              t.roundRect(r - 30, spriteTop - 12, 60, 16, 8),
+              t.fill(),
+              (t.fillStyle = "boss" === e.special ? "#ff846f" : "#f5d77f"),
+              t.fillText(label, r, spriteTop - 1));
+          }
+          if (e.specialization && !e.construction) {
+            ((t.fillStyle = "#fff0a8"),
+              (t.font = "900 12px var(--font-geist)"),
+              t.fillText(
+                developmentById[e.specialization]?.icon || "✦",
+                r + 0.42 * spriteWidth,
+                spriteTop + 8,
+              ));
+          }
+          if (isBannered) {
+            ((t.fillStyle = "#fff0a8"),
+              (t.shadowColor = l.humans.glow),
+              (t.shadowBlur = 12),
+              (t.font = "900 17px var(--font-geist)"),
+              t.fillText("♛", r, spriteTop - (e.special ? 15 : 3)),
+              (t.shadowBlur = 0));
+          }
+          t.restore();
           continue;
         }
         if (
@@ -3334,7 +3431,9 @@ export default function Game() {
                     (0, r.jsx)("button", {
                       className: `supply-toggle ${$ ? "active" : ""}`,
                       onClick: () => B((e) => !e),
-                      children: "↻ RAVITAILLEMENT",
+                      "aria-label": "Ravitaillement automatique",
+                      title: "Ravitaillement automatique",
+                      children: "↻",
                     }),
                   ],
                 }),

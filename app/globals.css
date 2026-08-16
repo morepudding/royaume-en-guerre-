@@ -1163,6 +1163,167 @@ canvas {
   }
 }
 
+/* Premium battle surface: the battlefield stays dominant and every control remains thumb-readable. */
+.screen-battle {
+  width: 100%;
+  max-width: none;
+  gap: 4px;
+  padding-top: max(4px, env(safe-area-inset-top));
+  padding-bottom: max(4px, env(safe-area-inset-bottom));
+}
+.screen-battle .topbar {
+  flex: 0 0 40px;
+  height: 40px;
+  padding: 0 3px;
+}
+.screen-battle .crest {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+}
+.screen-battle .brand strong {
+  font-size: 15px;
+  line-height: 1;
+}
+.screen-battle .territory-score {
+  min-height: 34px;
+  gap: 13px;
+  padding: 6px 14px;
+  background: linear-gradient(180deg, #111b17e8, #050907e8);
+  border-color: #f2c45d26;
+  box-shadow: inset 0 1px #ffffff12, 0 7px 20px #0005;
+  backdrop-filter: blur(12px);
+}
+.screen-battle .territory-score span,
+.screen-battle .territory-score time {
+  font-size: 13px;
+}
+.screen-battle .territory-score time {
+  padding-left: 13px;
+}
+.screen-battle .controls {
+  gap: 5px;
+}
+.screen-battle .controls button {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  border-color: #f2c45d2e;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #ffffff10, #00000018);
+  font-size: 14px;
+}
+.screen-battle .battle-card {
+  border-color: #d8b55f70;
+  border-radius: 17px;
+  box-shadow: 0 18px 50px #0008, inset 0 1px #ffffff24;
+}
+.screen-battle .objective-chip,
+.screen-battle .dispatch-panel,
+.screen-battle .command-power {
+  background: linear-gradient(145deg, #101a16e8, #030705ed);
+  border-color: #efd08145;
+  backdrop-filter: blur(13px) saturate(1.1);
+  box-shadow: 0 10px 30px #0008, inset 0 1px #ffffff13;
+}
+.screen-battle .objective-chip {
+  top: 8px;
+  left: 9px;
+  min-width: 0;
+  max-width: 34%;
+  min-height: 34px;
+  justify-content: center;
+  padding: 7px 12px;
+  border-radius: 12px;
+}
+.screen-battle .objective-chip b {
+  font-size: 12px;
+  line-height: 1.15;
+}
+.screen-battle .objective-chip b i {
+  font-size: 9px;
+}
+.screen-battle .dispatch-panel {
+  bottom: 8px;
+  left: 9px;
+  gap: 5px;
+  padding: 5px;
+  border-radius: 13px;
+}
+.screen-battle .dispatch-panel button {
+  min-width: 45px;
+  height: 38px;
+  padding: 0 11px;
+  border-radius: 9px;
+  color: #e6e3d8;
+  background: linear-gradient(180deg, #ffffff0d, #ffffff04);
+  border-color: #ffffff16;
+  font-size: 13px;
+}
+.screen-battle .dispatch-panel button.active {
+  color: #21180c;
+  background: linear-gradient(180deg, #ffdc7c, #e9ac43);
+  border-color: #ffe49a;
+  box-shadow: inset 0 1px #fff7c2, 0 4px 14px #e9ac4338;
+}
+.screen-battle .dispatch-panel .supply-toggle {
+  min-width: 38px;
+  width: 38px;
+  margin-left: 2px;
+  padding: 0;
+  font-size: 19px;
+}
+.screen-battle .command-power {
+  right: 9px;
+  bottom: 8px;
+  width: min(235px, 34%);
+  min-height: 49px;
+  padding: 6px;
+  border-radius: 13px;
+}
+.screen-battle .command-meter b {
+  font-size: 12px;
+}
+.screen-battle .command-meter i {
+  height: 5px;
+}
+.screen-battle .command-power > button {
+  flex-basis: 56px;
+  height: 37px;
+  border-radius: 9px;
+}
+.screen-battle .command-power > button strong {
+  font-size: 16px;
+}
+.screen-battle .command-power > button small {
+  font-size: 8px;
+}
+
+@media (orientation: landscape) and (max-height: 430px) {
+  .screen-battle .topbar {
+    flex-basis: 36px;
+    height: 36px;
+  }
+  .screen-battle .brand span:last-child {
+    display: none;
+  }
+  .screen-battle .crest,
+  .screen-battle .controls button {
+    width: 31px;
+    min-width: 31px;
+    height: 31px;
+    min-height: 31px;
+  }
+  .screen-battle .territory-score {
+    min-height: 31px;
+    padding: 5px 12px;
+  }
+  .screen-battle .objective-chip {
+    max-width: 38%;
+  }
+}
+
 /* Mobile readability pass: no essential label drops below a comfortable size. */
 @media (orientation: landscape) and (max-height: 570px) {
   .game-shell {
@@ -2193,5 +2354,61 @@ canvas {
   .unlock-banner {
     margin: 2px 0 5px;
     padding: 4px;
+  }
+}
+
+/* Keep the battle HUD authoritative after the legacy responsive layers above. */
+.screen-battle .objective-chip {
+  min-width: 0;
+  max-width: 34%;
+  min-height: 34px;
+  padding: 7px 12px;
+}
+.screen-battle .objective-chip b {
+  font-size: 12px;
+}
+.screen-battle .controls button {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+}
+.screen-battle .dispatch-panel {
+  bottom: 8px;
+  gap: 5px;
+  padding: 5px;
+}
+.screen-battle .dispatch-panel button {
+  min-width: 45px;
+  height: 38px;
+  padding: 0 11px;
+  font-size: 13px;
+}
+.screen-battle .dispatch-panel .supply-toggle {
+  min-width: 38px;
+  width: 38px;
+  padding: 0;
+  font-size: 19px;
+}
+.screen-battle .command-power {
+  right: 9px;
+  bottom: 8px;
+  width: min(235px, 34%);
+}
+.screen-battle .command-power > button {
+  flex-basis: 56px;
+  height: 37px;
+}
+
+@media (orientation: landscape) and (max-height: 430px) {
+  .screen-battle .topbar {
+    flex-basis: 36px;
+    height: 36px;
+  }
+  .screen-battle .brand span:last-child {
+    display: none;
+  }
+  .screen-battle .objective-chip {
+    max-width: 38%;
   }
 }

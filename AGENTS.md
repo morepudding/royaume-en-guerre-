@@ -12,6 +12,7 @@ This repository is the source of truth for **Royaume en Guerre**.
 - Missions 6–15 open with a dedicated narrative scene before gameplay
 - Battle HUD text is deliberately kept at the edges of the canvas
 - Terrain, moving armies and collision effects are rendered procedurally on canvas
+- Every mission renders illustrated human, neutral and Orc building sprites; do not fall back to abstract circular base icons except while an image is still loading
 - Human campaign power from mission 6: `La Bannière du Roi`
 - Command fills passively and gains bonuses from human captures and road-battle victories
 - At full command, the player targets a human base: directly connected human bases send 25% and the target gains +65% production for 8 seconds

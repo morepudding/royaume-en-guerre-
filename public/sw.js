@@ -1,4 +1,4 @@
-const CACHE = "royaumes-v7";
+const CACHE = "royaumes-v8";
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", event => {
   event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim()));
