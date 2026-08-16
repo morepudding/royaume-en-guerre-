@@ -766,16 +766,22 @@ const buildingNames = {
   tower: "Tour",
 };
 
+const publicAssetBase =
+  "https://raw.githubusercontent.com/morepudding/royaume-en-guerre-/main/public";
+
 const mission2AssetSources = {
-  city: "/assets/mission-2/village.png",
-  village: "/assets/mission-2/village.png",
-  fortress: "/assets/mission-2/fortress.png",
+  city: `${publicAssetBase}/assets/mission-2/village.png`,
+  village: `${publicAssetBase}/assets/mission-2/village.png`,
+  fortress: `${publicAssetBase}/assets/mission-2/fortress.png`,
 };
 
 const missionMapSources = Object.fromEntries(
   Array.from({ length: 15 }, (_, index) => {
     let id = index + 1;
-    return [id, `/assets/maps/mission-${String(id).padStart(2, "0")}.webp`];
+    return [
+      id,
+      `${publicAssetBase}/assets/maps/mission-${String(id).padStart(2, "0")}.webp`,
+    ];
   }),
 );
 
@@ -1088,6 +1094,7 @@ export default function Game() {
     let cancelled = !1;
     for (let [key, source] of Object.entries(mission2AssetSources)) {
       let image = new Image();
+      image.crossOrigin = "anonymous";
       image.decoding = "async";
       image.onload = () => {
         if (!cancelled) mission2Art.current[key] = image;
@@ -1102,6 +1109,7 @@ export default function Game() {
     let cancelled = !1;
     for (let [id, source] of Object.entries(missionMapSources)) {
       let image = new Image();
+      image.crossOrigin = "anonymous";
       image.decoding = "async";
       image.onload = () => {
         if (!cancelled) missionMapArt.current[id] = image;
