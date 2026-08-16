@@ -60,6 +60,8 @@ Preserve the current live game behavior unless the requested change explicitly m
 - When a requested change is complete, passes code-level validation, and is mergeable, merge it into `main` instead of maintaining a long-lived integration branch.
 - Keep a single Vercel production deployment. Do not create Vercel preview or branch deployments unless the user explicitly requests one.
 - Before merging, check the latest `main` and open pull requests so concurrent agent work is preserved.
+- A delivery request such as `push main` is not complete when the Git commit is published: wait for the corresponding Vercel production deployment, verify that the production alias points to it, and check at least one newly added or changed public asset on the live URL.
+- If the Git push does not trigger Vercel automatically, deploy the same `main` revision to production directly and report success only after the live verification passes.
 
 ## Validation ownership
 
