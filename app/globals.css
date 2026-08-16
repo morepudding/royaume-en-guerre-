@@ -1163,6 +1163,231 @@ canvas {
   }
 }
 
+/* Mobile readability pass: no essential label drops below a comfortable size. */
+@media (orientation: landscape) and (max-height: 570px) {
+  .game-shell {
+    padding-bottom: max(5px, env(safe-area-inset-bottom));
+  }
+  .topbar {
+    flex-basis: 44px;
+    height: 44px;
+  }
+  .brand small,
+  .territory-score em,
+  .campaign-act > header span,
+  .home-progress small,
+  .home-footnote {
+    display: none;
+  }
+  .brand strong {
+    font-size: 15px;
+  }
+  .territory-score {
+    padding: 6px 13px;
+    font-size: 14px;
+  }
+  .game-shell .territory-score time {
+    font-size: 12px;
+  }
+  .game-shell .controls button {
+    width: 36px;
+    height: 36px;
+    font-size: 15px;
+  }
+  .game-shell .objective-chip {
+    min-width: 0;
+    max-width: 46%;
+    min-height: 35px;
+    justify-content: center;
+    padding: 7px 12px;
+  }
+  .game-shell .objective-chip b {
+    font-size: 11px;
+  }
+  .game-shell .objective-chip b i {
+    font-size: 9px;
+  }
+  .game-shell .dispatch-panel {
+    gap: 5px;
+    padding: 5px;
+  }
+  .game-shell .dispatch-panel button {
+    min-width: 43px;
+    height: 38px;
+    font-size: 13px;
+  }
+  .game-shell .dispatch-panel .supply-toggle {
+    min-width: 118px;
+    font-size: 10px;
+  }
+  .game-shell .development-panel header strong {
+    font-size: 13px;
+  }
+  .game-shell .development-options > button {
+    min-height: 45px;
+  }
+  .game-shell .development-options strong,
+  .game-shell .development-options em,
+  .game-shell .construction-progress,
+  .game-shell .development-complete {
+    font-size: 11px;
+  }
+  .game-shell .command-meter b {
+    font-size: 10px;
+  }
+  .game-shell .command-power > button small {
+    font-size: 8px;
+  }
+  .tutorial-card small {
+    font-size: 9px;
+  }
+  .tutorial-card strong {
+    font-size: 13px;
+  }
+  .tutorial-card p,
+  .action-toast {
+    font-size: 10px;
+  }
+  .game-shell .primary-button,
+  .game-shell .secondary-button,
+  .game-shell .campaign-back,
+  .game-shell .home-icon-button {
+    font-size: 12px;
+  }
+  .game-shell .home-hero h1 {
+    font-size: clamp(38px, 11vh, 58px);
+  }
+  .game-shell .home-progress b {
+    font-size: 22px;
+  }
+  .game-shell .home-continue small {
+    font-size: 9px;
+  }
+  .game-shell .campaign-head h1 {
+    font-size: 28px;
+  }
+  .game-shell .campaign-tally b {
+    font-size: 21px;
+  }
+  .game-shell .campaign-tally span {
+    font-size: 9px;
+  }
+  .game-shell .campaign-act {
+    grid-template-columns: minmax(116px, 17%) 1fr;
+  }
+  .game-shell .campaign-act > header strong {
+    font-size: 11px;
+  }
+  .game-shell .node-medallion {
+    width: 34px;
+    height: 34px;
+    font-size: 11px;
+  }
+  .game-shell .mission-node strong {
+    margin-top: 3px;
+    font-size: 9px;
+  }
+  .game-shell .mission-node em,
+  .game-shell .mission-node.locked em {
+    font-size: 8px;
+  }
+  .game-shell .sheet-identity,
+  .game-shell .sheet-orders {
+    padding: 18px 24px;
+  }
+  .game-shell .sheet-identity small {
+    font-size: 10px;
+  }
+  .game-shell .sheet-identity h2 {
+    font-size: clamp(25px, 7vh, 35px);
+  }
+  .game-shell .sheet-orders h3 {
+    font-size: 19px;
+  }
+  .game-shell .crown-conditions span {
+    min-height: 30px;
+    font-size: 10px;
+  }
+  .mission-intro-panel > small {
+    font-size: 9px;
+  }
+  .mission-intro h2 {
+    font-size: clamp(27px, 8vh, 40px);
+  }
+  .intro-scene {
+    font-size: 11px;
+  }
+  .intro-order span,
+  .intro-power small {
+    font-size: 8px;
+  }
+  .intro-order b,
+  .intro-power b {
+    font-size: 11px;
+  }
+  .intro-power p {
+    font-size: 9px;
+  }
+  .game-shell .modal-overlay .result-panel h2 {
+    font-size: clamp(27px, 7vh, 38px);
+  }
+  .game-shell .result-crowns small,
+  .game-shell .result-stats small,
+  .game-shell .unlock-banner span {
+    font-size: 8px;
+  }
+  .game-shell .result-stats b,
+  .game-shell .unlock-banner b {
+    font-size: 13px;
+  }
+  .codex-grid p {
+    font-size: 10px;
+  }
+  .codex-grid b {
+    font-size: 12px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 390px) {
+  .game-shell .campaign-route {
+    gap: 4px;
+  }
+  .game-shell .campaign-act {
+    grid-template-columns: 104px 1fr;
+  }
+  .game-shell .campaign-act > header strong {
+    font-size: 10px;
+  }
+  .game-shell .node-medallion {
+    width: 30px;
+    height: 30px;
+  }
+  .game-shell .mission-node strong {
+    font-size: 8px;
+  }
+  .game-shell .mission-node em,
+  .game-shell .mission-node.locked em {
+    font-size: 7px;
+  }
+  .game-shell .mission-sheet-card {
+    min-height: 88%;
+  }
+  .game-shell .crown-conditions {
+    margin: 6px 0;
+  }
+  .game-shell .crown-conditions span {
+    min-height: 25px;
+    font-size: 9px;
+  }
+  .game-shell .dispatch-panel .supply-toggle {
+    min-width: 42px;
+    font-size: 0;
+  }
+  .game-shell .dispatch-panel .supply-toggle:first-letter {
+    font-size: 13px;
+  }
+}
+
 /* Product shell: title, campaign route, briefing and debriefing */
 .screen-home {
   width: 100%;

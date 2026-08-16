@@ -767,10 +767,214 @@ const buildingNames = {
 };
 
 const mission2AssetSources = {
-  map: "/assets/mission-2/river-diorama.webp",
   city: "/assets/mission-2/village.png",
   village: "/assets/mission-2/village.png",
   fortress: "/assets/mission-2/fortress.png",
+};
+
+const missionMapSources = Object.fromEntries(
+  Array.from({ length: 15 }, (_, index) => {
+    let id = index + 1;
+    return [id, `/assets/maps/mission-${String(id).padStart(2, "0")}.webp`];
+  }),
+);
+
+const missionVisuals = {
+  1: {
+    palette: ["#3d6844", "#24452f", "#4b3822"],
+    accent: "#d9c27d",
+    architecture: "marches",
+    landmarks: [["fields", 0.49, 0.2, 0.18], ["woods", 0.5, 0.82, 0.17]],
+  },
+  2: {
+    palette: ["#426552", "#1d4943", "#695338"],
+    accent: "#9cc9bd",
+    architecture: "river",
+    landmarks: [["reeds", 0.5, 0.12, 0.16], ["reeds", 0.54, 0.88, 0.17]],
+  },
+  3: {
+    palette: ["#385d3c", "#263d2b", "#59442c"],
+    accent: "#c8b58c",
+    architecture: "royal",
+    landmarks: [["ruins", 0.5, 0.17, 0.17], ["ruins", 0.5, 0.84, 0.16]],
+  },
+  4: {
+    palette: ["#34453d", "#202e2a", "#554436"],
+    accent: "#b8c7bd",
+    architecture: "mountain",
+    landmarks: [["peaks", 0.28, 0.13, 0.23], ["peaks", 0.7, 0.86, 0.2]],
+  },
+  5: {
+    palette: ["#436346", "#203c2c", "#61452b"],
+    accent: "#bdc878",
+    architecture: "valley",
+    landmarks: [["ridge", 0.5, 0.5, 0.19], ["woods", 0.5, 0.08, 0.12]],
+  },
+  6: {
+    palette: ["#3d4940", "#232f2b", "#5d422f"],
+    accent: "#e2a756",
+    architecture: "amber",
+    landmarks: [["walls", 0.5, 0.14, 0.27], ["camps", 0.12, 0.5, 0.13]],
+  },
+  7: {
+    palette: ["#4a5544", "#29382f", "#5e4633"],
+    accent: "#d48b54",
+    architecture: "ash",
+    landmarks: [["fires", 0.55, 0.15, 0.16], ["fires", 0.48, 0.86, 0.15]],
+  },
+  8: {
+    palette: ["#244944", "#172f2e", "#403e2b"],
+    accent: "#76d4c0",
+    architecture: "rune",
+    landmarks: [["monoliths", 0.5, 0.13, 0.19], ["pools", 0.5, 0.87, 0.17]],
+  },
+  9: {
+    palette: ["#4d4f3b", "#30392d", "#673829"],
+    accent: "#ef835d",
+    architecture: "burned",
+    landmarks: [["fires", 0.42, 0.16, 0.2], ["fires", 0.42, 0.84, 0.2]],
+  },
+  10: {
+    palette: ["#343a36", "#222a28", "#4e3530"],
+    accent: "#cf6659",
+    architecture: "basalt",
+    landmarks: [["peaks", 0.52, 0.12, 0.26], ["monoliths", 0.53, 0.87, 0.2]],
+  },
+  11: {
+    palette: ["#273f3b", "#162f30", "#493a30"],
+    accent: "#75a8ae",
+    architecture: "blackriver",
+    landmarks: [["reeds", 0.5, 0.14, 0.18], ["ruins", 0.52, 0.86, 0.16]],
+  },
+  12: {
+    palette: ["#4b5d3e", "#273b2c", "#56322e"],
+    accent: "#c86d68",
+    architecture: "vermeil",
+    landmarks: [["fields", 0.5, 0.14, 0.2], ["camps", 0.5, 0.87, 0.14]],
+  },
+  13: {
+    palette: ["#183b35", "#102a28", "#263227"],
+    accent: "#829d8a",
+    architecture: "forest",
+    landmarks: [["woods", 0.5, 0.13, 0.28], ["woods", 0.5, 0.88, 0.27]],
+  },
+  14: {
+    palette: ["#496746", "#28432f", "#665036"],
+    accent: "#f0d17c",
+    architecture: "crown",
+    landmarks: [["ruins", 0.5, 0.13, 0.22], ["fields", 0.5, 0.87, 0.2]],
+  },
+  15: {
+    palette: ["#5d5945", "#343d31", "#744333"],
+    accent: "#f0a25d",
+    architecture: "dawn",
+    landmarks: [["ridge", 0.5, 0.13, 0.26], ["camps", 0.5, 0.88, 0.18]],
+  },
+};
+
+const drawMissionLandmarks = (ctx, width, height, mission) => {
+  let visual = missionVisuals[mission.id] || missionVisuals[1];
+  ctx.save();
+  for (let [type, px, py, size] of visual.landmarks) {
+    let x = px * width,
+      y = py * height,
+      radius = size * Math.min(width, height);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.globalAlpha = 0.5;
+    if ("fields" === type) {
+      ctx.strokeStyle = visual.accent;
+      ctx.lineWidth = 1.2;
+      for (let line = -3; line <= 3; line++) {
+        ctx.beginPath();
+        ctx.ellipse(0, line * radius * 0.16, radius, radius * 0.2, -0.08, 0, 7);
+        ctx.stroke();
+      }
+    } else if ("woods" === type) {
+      for (let tree = 0; tree < 13; tree++) {
+        let angle = tree * 2.4,
+          distance = radius * (0.18 + (tree % 5) * 0.16),
+          tx = Math.cos(angle) * distance,
+          ty = Math.sin(angle) * distance * 0.5;
+        ctx.fillStyle = tree % 2 ? "#10251a" : "#1a3522";
+        ctx.beginPath();
+        ctx.moveTo(tx, ty - 11);
+        ctx.lineTo(tx - 7, ty + 7);
+        ctx.lineTo(tx + 7, ty + 7);
+        ctx.fill();
+      }
+    } else if ("peaks" === type || "ridge" === type) {
+      ctx.fillStyle = "rgba(8,12,10,.65)";
+      for (let peak = -2; peak <= 2; peak++) {
+        let offset = peak * radius * 0.4,
+          peakHeight = radius * (0.45 + 0.12 * (peak % 2));
+        ctx.beginPath();
+        ctx.moveTo(offset - radius * 0.42, radius * 0.24);
+        ctx.lineTo(offset, -peakHeight);
+        ctx.lineTo(offset + radius * 0.42, radius * 0.24);
+        ctx.fill();
+      }
+    } else if ("ruins" === type || "walls" === type) {
+      ctx.strokeStyle = visual.accent;
+      ctx.lineWidth = "walls" === type ? 5 : 3;
+      ctx.setLineDash("walls" === type ? [16, 7] : [9, 8]);
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, Math.PI * 0.08, Math.PI * 0.92);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      for (let pillar = -2; pillar <= 2; pillar++) {
+        ctx.fillStyle = "rgba(15,19,16,.72)";
+        ctx.fillRect(pillar * radius * 0.35 - 3, -8, 6, 22 - 3 * Math.abs(pillar));
+      }
+    } else if ("reeds" === type) {
+      ctx.strokeStyle = visual.accent;
+      ctx.lineWidth = 1.2;
+      for (let reed = -7; reed <= 7; reed++) {
+        let rx = reed * radius * 0.12,
+          rh = 10 + ((reed + 9) % 4) * 5;
+        ctx.beginPath();
+        ctx.moveTo(rx, 7);
+        ctx.quadraticCurveTo(rx + 3, -rh * 0.4, rx - 1, -rh);
+        ctx.stroke();
+      }
+    } else if ("fires" === type || "camps" === type) {
+      for (let fire = -2; fire <= 2; fire++) {
+        let fx = fire * radius * 0.38,
+          fy = (fire % 2) * radius * 0.12;
+        ctx.fillStyle = "rgba(12,12,9,.72)";
+        ctx.beginPath();
+        ctx.moveTo(fx - 10, fy + 8);
+        ctx.lineTo(fx, fy - 13);
+        ctx.lineTo(fx + 10, fy + 8);
+        ctx.fill();
+        if ("fires" === type) {
+          ctx.fillStyle = "#dc6b3f";
+          ctx.beginPath();
+          ctx.arc(fx + 12, fy + 5, 3.5, 0, 7);
+          ctx.fill();
+        }
+      }
+    } else if ("monoliths" === type) {
+      ctx.strokeStyle = visual.accent;
+      ctx.fillStyle = "rgba(9,14,12,.78)";
+      for (let stone = -2; stone <= 2; stone++) {
+        let sx = stone * radius * 0.35,
+          sh = 20 + 5 * (stone % 2);
+        ctx.fillRect(sx - 5, -sh, 10, sh + 6);
+        ctx.strokeRect(sx - 5, -sh, 10, sh + 6);
+      }
+    } else if ("pools" === type) {
+      ctx.fillStyle = visual.accent;
+      for (let pool = -1; pool <= 1; pool++) {
+        ctx.globalAlpha = 0.13;
+        ctx.beginPath();
+        ctx.ellipse(pool * radius * 0.55, 0, radius * 0.4, radius * 0.14, -0.1, 0, 7);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+  ctx.restore();
 };
 
 export default function Game() {
@@ -811,10 +1015,10 @@ export default function Game() {
     audioEngine = (0, t.useRef)(null),
     battleFx = (0, t.useRef)({ shake: 0, flash: 0, color: "242,196,93" }),
     mission2Art = (0, t.useRef)({
-      map: null,
       village: null,
       fortress: null,
     }),
+    missionMapArt = (0, t.useRef)({}),
     [P, A] = (0, t.useState)("home"),
     [E, I] = (0, t.useState)("playing"),
     [O, q] = (0, t.useState)(1),
@@ -887,6 +1091,20 @@ export default function Game() {
       image.decoding = "async";
       image.onload = () => {
         if (!cancelled) mission2Art.current[key] = image;
+      };
+      image.src = source;
+    }
+    return () => {
+      cancelled = !0;
+    };
+  }, []);
+  (0, t.useEffect)(() => {
+    let cancelled = !1;
+    for (let [id, source] of Object.entries(missionMapSources)) {
+      let image = new Image();
+      image.decoding = "async";
+      image.onload = () => {
+        if (!cancelled) missionMapArt.current[id] = image;
       };
       image.src = source;
     }
@@ -1874,18 +2092,18 @@ export default function Game() {
           }),
           K(es()));
       }
-      let mission2Map = 2 === L.id ? mission2Art.current.map : null;
-      if (mission2Map?.complete && mission2Map.naturalWidth) {
+      let missionMap = missionMapArt.current[L.id];
+      if (missionMap?.complete && missionMap.naturalWidth) {
         let scale = Math.max(
-            o / mission2Map.naturalWidth,
-            c / mission2Map.naturalHeight,
+            o / missionMap.naturalWidth,
+            c / missionMap.naturalHeight,
           ),
           sourceWidth = o / scale,
           sourceHeight = c / scale,
-          sourceX = (mission2Map.naturalWidth - sourceWidth) / 2,
-          sourceY = (mission2Map.naturalHeight - sourceHeight) / 2;
+          sourceX = (missionMap.naturalWidth - sourceWidth) / 2,
+          sourceY = (missionMap.naturalHeight - sourceHeight) / 2;
         (t.drawImage(
-          mission2Map,
+          missionMap,
           sourceX,
           sourceY,
           sourceWidth,
@@ -1898,13 +2116,8 @@ export default function Game() {
           (t.fillStyle = "rgba(4,9,6,.12)"),
           t.fillRect(0, 0, o, c));
       } else {
-        let terrainColors = {
-          plain: ["#294c31", "#193523", "#34291b"],
-          valley: ["#315039", "#183326", "#3d2d1f"],
-          mountains: ["#303b32", "#1d2d27", "#46352d"],
-          marsh: ["#183b35", "#122c28", "#2d3022"],
-          river: ["#24463d", "#15342f", "#3a3024"],
-        }[L.terrain] || ["#294c31", "#193523", "#34291b"],
+        let terrainColors =
+          missionVisuals[L.id]?.palette || ["#294c31", "#193523", "#34291b"],
         A = t.createLinearGradient(0, 0, o, c);
       (A.addColorStop(0, terrainColors[0]),
         A.addColorStop(0.55, terrainColors[1]),
@@ -1998,6 +2211,7 @@ export default function Game() {
         t.fillRect(0, 0, o, c),
         t.restore());
       }
+      if (!missionMap?.complete) drawMissionLandmarks(t, o, c, L);
       let E = (e) => 24 + e.x * b,
         I = (e) => 44 + e.y * M;
       for (let [e, r] of L.roads) {
@@ -2734,12 +2948,7 @@ export default function Game() {
                       className: "home-standard",
                       children: "♜",
                     }),
-                    (0, r.jsx)("small", { children: "CHRONIQUES DU ROYAUME" }),
                     (0, r.jsx)("h1", { children: "Royaumes en Guerre" }),
-                    (0, r.jsx)("p", {
-                      children:
-                        "Commande les garnisons du Roi. Brise la Horde. Reprends les quinze territoires avant l’aube rouge.",
-                    }),
                     (0, r.jsxs)("div", {
                       className: "home-progress",
                       children: [
@@ -2787,10 +2996,6 @@ export default function Game() {
                     }),
                   ],
                 }),
-                (0, r.jsx)("span", {
-                  className: "home-footnote",
-                  children: "UNE CAMPAGNE TACTIQUE EN QUINZE BATAILLES",
-                }),
               ],
             }),
           "campaign" === P &&
@@ -2807,9 +3012,6 @@ export default function Game() {
                     }),
                     (0, r.jsxs)("div", {
                       children: [
-                        (0, r.jsx)("p", {
-                          children: "LA GUERRE DES DEUX PEUPLES",
-                        }),
                         (0, r.jsx)("h1", { children: "Carte de campagne" }),
                       ],
                     }),
@@ -2895,19 +3097,12 @@ export default function Game() {
                       }),
                       (0, r.jsx)("small", { children: selectedMission.region }),
                       (0, r.jsx)("h2", { children: selectedMission.name }),
-                      (0, r.jsx)("p", { children: selectedMission.briefing }),
                     ],
                   }),
                   (0, r.jsxs)("div", {
                     className: "sheet-orders",
                     children: [
-                      (0, r.jsx)("small", { children: "ORDRE DE BATAILLE" }),
                       (0, r.jsx)("h3", { children: selectedMission.objective }),
-                      (0, r.jsx)("p", {
-                        children:
-                          missionScenes[selectedMission.id]?.rule ||
-                          `${selectedMission.lesson} · Mission de conquête`,
-                      }),
                       (0, r.jsxs)("div", {
                         className: "crown-conditions",
                         children: [
@@ -2959,10 +3154,6 @@ export default function Game() {
                   }),
                   (0, r.jsx)("small", {
                     children: missionScenes[missionIntro.id]?.chapter,
-                  }),
-                  (0, r.jsx)("span", {
-                    className: "intro-region",
-                    children: missionIntro.region,
                   }),
                   (0, r.jsx)("h2", { children: missionIntro.name }),
                   (0, r.jsx)("p", {
@@ -3094,9 +3285,6 @@ export default function Game() {
                                           (0, r.jsx)("strong", {
                                             children: option.label,
                                           }),
-                                          (0, r.jsx)("small", {
-                                            children: option.description,
-                                          }),
                                         ],
                                       }),
                                       (0, r.jsx)("em", {
@@ -3113,7 +3301,6 @@ export default function Game() {
                 (0, r.jsxs)("div", {
                   className: "objective-chip",
                   children: [
-                    (0, r.jsx)("span", { children: `MISSION ${String(O).padStart(2, "0")}` }),
                     (0, r.jsxs)("b", {
                       children: [
                         (0, r.jsx)("i", { children: "◆" }),
@@ -3125,7 +3312,6 @@ export default function Game() {
                 (0, r.jsxs)("div", {
                   className: "dispatch-panel",
                   children: [
-                    (0, r.jsx)("small", { children: "ENVOI" }),
                     [0.25, 0.5, 1].map((e) =>
                       (0, r.jsx)(
                         "button",
@@ -3153,9 +3339,6 @@ export default function Game() {
                         children: [
                           (0, r.jsxs)("span", {
                             children: [
-                              (0, r.jsx)("small", {
-                                children: "COMMANDEMENT",
-                              }),
                               (0, r.jsx)("b", {
                                 children: commandUi.active
                                   ? `Bannière active · ${commandUi.active}s`
@@ -3214,9 +3397,6 @@ export default function Game() {
                     className: "modal-overlay",
                     children: (0, r.jsxs)("div", {
                       children: [
-                        (0, r.jsx)("small", {
-                          children: "MISSION EN PAUSE",
-                        }),
                         (0, r.jsx)("h2", { children: ef.name }),
                         (0, r.jsx)("button", {
                           className: "primary-button",
@@ -3241,22 +3421,11 @@ export default function Game() {
                           className: "result-seal",
                           children: "won" === E ? "♛" : "☠",
                         }),
-                        (0, r.jsx)("small", {
-                          children:
-                            "won" === E ? "TERRITOIRE CONQUIS" : "RAPPORT DE DÉFAITE",
-                        }),
                         (0, r.jsx)("h2", {
                           children:
                             "won" === E
                               ? ef.name
                               : "La ligne a cédé",
-                        }),
-                        (0, r.jsx)("p", {
-                          className: "result-subtitle",
-                          children:
-                            "won" === E
-                              ? "Le Roi inscrit cette victoire dans les chroniques."
-                              : "La Horde tient encore le terrain. Réorganise tes ordres et frappe à nouveau.",
                         }),
                         (0, r.jsx)("div", {
                           className: "result-crowns",
@@ -3317,7 +3486,6 @@ export default function Game() {
                             children: [
                               (0, r.jsx)("span", { children: "NOUVEAU FRONT" }),
                               (0, r.jsx)("b", { children: s[O].name }),
-                              (0, r.jsx)("small", { children: s[O].region }),
                             ],
                           }),
                         (0, r.jsxs)("div", {
@@ -3428,23 +3596,6 @@ export default function Game() {
                 ],
               }),
             }),
-        ],
-      }),
-      (0, r.jsxs)("footer", {
-        className: "battle-hint",
-        children: [
-          (0, r.jsx)("span", {
-            children:
-              "battle" === P
-                ? "GLISSE D’UNE BASE JAUNE VERS UNE BASE RELIÉE"
-                : "CHOISIS TON PROCHAIN FRONT",
-          }),
-          (0, r.jsx)("b", {
-            children:
-              "battle" === P
-                ? `${Math.floor(Y.time / 60)}:${String(Y.time % 60).padStart(2, "0")}`
-                : `${Object.values(_.crowns).reduce((e, r) => e + r, 0)} COURONNES`,
-          }),
         ],
       }),
       (0, r.jsxs)("div", {
