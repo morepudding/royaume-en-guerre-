@@ -1324,6 +1324,133 @@ canvas {
   }
 }
 
+/* Battle layout v2: one uninterrupted map with a single floating HUD layer. */
+.screen-battle {
+  position: relative;
+  gap: 0;
+  padding: max(4px, env(safe-area-inset-top))
+    max(5px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom))
+    max(5px, env(safe-area-inset-left));
+}
+.screen-battle .topbar {
+  z-index: 8;
+  pointer-events: none;
+  width: auto;
+  height: 36px;
+  padding: 0;
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  left: max(12px, env(safe-area-inset-left));
+}
+.screen-battle .topbar > * {
+  pointer-events: auto;
+}
+.screen-battle .brand span:last-child,
+.screen-battle .territory-score em {
+  display: none;
+}
+.screen-battle .crest {
+  width: 34px;
+  height: 34px;
+  background: linear-gradient(180deg, #15251ddf, #07100ce8);
+  border-color: #e9c26478;
+  box-shadow: 0 7px 20px #0007, inset 0 1px #ffffff16;
+  backdrop-filter: blur(12px);
+}
+.screen-battle .territory-score {
+  height: 34px;
+  min-height: 34px;
+  gap: 12px;
+  padding: 5px 13px;
+}
+.screen-battle .controls button {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  background: linear-gradient(180deg, #15211ce8, #060b08eb);
+  box-shadow: 0 7px 20px #0007, inset 0 1px #ffffff12;
+  backdrop-filter: blur(12px);
+}
+.screen-battle .battle-card {
+  width: 100%;
+  flex: 1 1 100%;
+  border-radius: 18px;
+}
+.screen-battle .objective-chip {
+  z-index: 7;
+  top: 8px;
+  left: 50px;
+  max-width: 27%;
+  min-height: 34px;
+  padding: 7px 11px;
+}
+.screen-battle .dispatch-panel,
+.screen-battle .command-power {
+  z-index: 7;
+  bottom: 8px;
+}
+.screen-battle .dispatch-panel {
+  gap: 4px;
+  padding: 4px;
+}
+.screen-battle .dispatch-panel button {
+  min-width: 40px;
+  height: 34px;
+  padding: 0 9px;
+  font-size: 12px;
+}
+.screen-battle .dispatch-panel .supply-toggle {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  font-size: 18px;
+}
+.screen-battle .command-power {
+  width: min(205px, 29%);
+  min-height: 43px;
+  gap: 6px;
+  padding: 5px;
+}
+.screen-battle .command-meter b {
+  font-size: 11px;
+}
+.screen-battle .command-power > button {
+  flex-basis: 50px;
+  height: 33px;
+}
+.screen-battle .command-power > button strong {
+  font-size: 14px;
+}
+.screen-battle .command-power > button small {
+  font-size: 7px;
+}
+
+@media (orientation: landscape) and (max-height: 430px) {
+  .screen-battle .topbar {
+    height: 34px;
+    top: max(8px, env(safe-area-inset-top));
+  }
+  .screen-battle .crest,
+  .screen-battle .controls button,
+  .screen-battle .territory-score {
+    height: 32px;
+    min-height: 32px;
+  }
+  .screen-battle .crest,
+  .screen-battle .controls button {
+    width: 32px;
+    min-width: 32px;
+  }
+  .screen-battle .objective-chip {
+    top: 7px;
+    left: 46px;
+    max-width: 29%;
+    min-height: 32px;
+  }
+}
+
 /* Mobile readability pass: no essential label drops below a comfortable size. */
 @media (orientation: landscape) and (max-height: 570px) {
   .game-shell {

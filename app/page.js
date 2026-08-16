@@ -766,6 +766,18 @@ const buildingNames = {
   tower: "Tour",
 };
 
+const getBattlefieldLayout = (width, height) => {
+  let horizontal = Math.max(58, Math.min(78, 0.065 * width)),
+    top = Math.max(88, Math.min(104, 0.18 * height)),
+    bottom = Math.max(78, Math.min(88, 0.15 * height));
+  return {
+    left: horizontal,
+    top,
+    width: Math.max(1, width - 2 * horizontal),
+    height: Math.max(1, height - top - bottom),
+  };
+};
+
 const publicAssetBase =
   "https://raw.githubusercontent.com/morepudding/royaume-en-guerre-/main/public";
 
@@ -1523,8 +1535,9 @@ export default function Game() {
       let i = r.getBoundingClientRect(),
         o = i.width,
         c = i.height,
-        b = o - 48,
-        M = c - 68,
+        battlefield = getBattlefieldLayout(o, c),
+        b = battlefield.width,
+        M = battlefield.height,
         N = Math.min((e - (y.current || e)) / 1e3, 0.05);
       y.current = e;
       let L = h.current,
@@ -2234,8 +2247,8 @@ export default function Game() {
         t.restore());
       }
       if (!missionMap?.complete) drawMissionLandmarks(t, o, c, L);
-      let E = (e) => 24 + e.x * b,
-        I = (e) => 44 + e.y * M;
+      let E = (e) => battlefield.left + e.x * b,
+        I = (e) => battlefield.top + e.y * M;
       for (let [e, r] of L.roads) {
         let s = n.current[e],
           a = n.current[r],
@@ -2243,26 +2256,45 @@ export default function Game() {
             L.lockedRoad &&
             P.bridge < (L.target || 40) &&
             ((e === L.lockedRoad[0] && r === L.lockedRoad[1]) ||
-              (r === L.lockedRoad[0] && e === L.lockedRoad[1]));
+              (r === L.lockedRoad[0] && e === L.lockedRoad[1])),
+          fromX = E(s),
+          fromY = I(s),
+          toX = E(a),
+          toY = I(a),
+          angle = Math.atan2(toY - fromY, toX - fromX),
+          inset = 29,
+          startX = fromX + Math.cos(angle) * inset,
+          startY = fromY + Math.sin(angle) * inset,
+          endX = toX - Math.cos(angle) * inset,
+          endY = toY - Math.sin(angle) * inset,
+          curve = (((17 * e + 31 * r) % 3) - 1) * 7,
+          controlX = (startX + endX) / 2 - Math.sin(angle) * curve,
+          controlY = (startY + endY) / 2 + Math.cos(angle) * curve,
+          roadPath = () => {
+            (t.beginPath(),
+              t.moveTo(startX, startY),
+              t.quadraticCurveTo(controlX, controlY, endX, endY));
+          };
         (t.save(),
           (t.lineCap = "round"),
           (t.lineJoin = "round"),
-          t.beginPath(),
-          t.moveTo(E(s), I(s)),
-          t.lineTo(E(a), I(a)),
-          (t.strokeStyle = l ? "rgba(67,16,13,.74)" : "rgba(31,24,15,.5)"),
-          (t.lineWidth = l ? 7 : 6),
+          roadPath(),
+          (t.strokeStyle = l ? "rgba(67,16,13,.74)" : "rgba(26,20,14,.42)"),
+          (t.lineWidth = l ? 8 : 10),
           t.stroke(),
-          t.beginPath(),
-          t.moveTo(E(s), I(s)),
-          t.lineTo(E(a), I(a)),
+          roadPath(),
           (t.strokeStyle = l
-            ? "rgba(255,111,91,.72)"
-            : "rgba(225,204,157,.5)"),
-          (t.lineWidth = l ? 2.5 : 1.6),
-          t.setLineDash(l ? [5, 8] : [2, 7]),
+            ? "rgba(255,111,91,.68)"
+            : "rgba(130,107,70,.42)"),
+          (t.lineWidth = l ? 3 : 5),
+          t.setLineDash(l ? [5, 8] : []),
           t.stroke(),
           t.setLineDash([]),
+          !l &&
+            (roadPath(),
+            (t.strokeStyle = "rgba(232,211,164,.28)"),
+            (t.lineWidth = 1),
+            t.stroke()),
           t.restore());
       }
       let pendingOrcPlan = orcMind.current.plan;
@@ -2492,39 +2524,53 @@ export default function Game() {
                 : buildingArt.current.neutral,
           buildingSprite = factionArt[e.kind] || factionArt.city;
         if (buildingSprite?.complete && buildingSprite.naturalWidth) {
-          let scale = Math.max(0.76, Math.min(1.08, c / 430)),
-            targetWidths = { city: 82, village: 90, fortress: 102, tower: 72 },
-            maxHeights = { city: 72, village: 76, fortress: 88, tower: 102 },
-            spriteWidth = (targetWidths[e.kind] || 82) * scale,
+          let scale = Math.max(0.74, Math.min(1.03, c / 455)),
+            targetWidths = { city: 78, village: 82, fortress: 92, tower: 64 },
+            maxHeights = { city: 64, village: 67, fortress: 79, tower: 88 },
+            spriteWidth = (targetWidths[e.kind] || 78) * scale,
             spriteHeight =
               spriteWidth *
               (buildingSprite.naturalHeight / buildingSprite.naturalWidth),
-            maxHeight = (maxHeights[e.kind] || 76) * scale;
+            maxHeight = (maxHeights[e.kind] || 67) * scale;
           if (spriteHeight > maxHeight) {
             spriteWidth *= maxHeight / spriteHeight;
             spriteHeight = maxHeight;
           }
-          let baseY = n + 22 * scale,
+          let baseY = n + 19 * scale,
             spriteTop = baseY - spriteHeight,
-            badgeY = baseY + 3,
+            badgeY = baseY - 4,
             haloPulse = 1 + 0.05 * Math.sin(0.006 * performance.now()),
             needsFocus = o || u || isPowerTarget || isBannered;
           (t.save(),
-            (t.shadowColor = "rgba(0,0,0,.8)"),
-            (t.shadowBlur = 13),
-            (t.fillStyle = "rgba(2,5,4,.55)"),
+            (t.shadowColor = "rgba(0,0,0,.72)"),
+            (t.shadowBlur = 11),
+            (t.fillStyle = "rgba(2,5,4,.48)"),
             t.beginPath(),
             t.ellipse(
               r,
-              baseY - 5,
-              0.39 * spriteWidth,
-              Math.max(6, 0.1 * spriteHeight),
+              baseY - 6,
+              0.46 * spriteWidth,
+              Math.max(7, 0.11 * spriteHeight),
               0,
               0,
               7,
             ),
             t.fill(),
             (t.shadowBlur = 0),
+            (t.globalAlpha = "neutral" === e.owner ? 0.08 : 0.14),
+            (t.fillStyle = i.main),
+            t.beginPath(),
+            t.ellipse(
+              r,
+              baseY - 7,
+              0.48 * spriteWidth,
+              Math.max(8, 0.13 * spriteHeight),
+              0,
+              0,
+              7,
+            ),
+            t.fill(),
+            (t.globalAlpha = 1),
             needsFocus &&
               ((t.strokeStyle = u || isPowerTarget ? "#fff4d0" : i.main),
               (t.lineWidth = u || isPowerTarget ? 3 : 2),
@@ -2534,15 +2580,20 @@ export default function Game() {
               t.ellipse(
                 r,
                 baseY - 7,
-                0.5 * spriteWidth * haloPulse,
-                Math.max(13, 0.18 * spriteHeight) * haloPulse,
+                0.49 * spriteWidth * haloPulse,
+                Math.max(11, 0.16 * spriteHeight) * haloPulse,
                 0,
                 0,
                 7,
               ),
               t.stroke(),
               (t.shadowBlur = 0)),
-            (t.filter = "neutral" === e.owner ? "grayscale(.68) saturate(.55) brightness(.92)" : "none"),
+            (t.filter =
+              "neutral" === e.owner
+                ? "grayscale(.72) saturate(.48) brightness(.84) contrast(.92)"
+                : "orcs" === e.owner
+                  ? "saturate(.82) brightness(.86) contrast(.95)"
+                  : "saturate(.78) brightness(.9) contrast(.94)"),
             t.drawImage(
               buildingSprite,
               r - spriteWidth / 2,
@@ -2571,16 +2622,16 @@ export default function Game() {
               ),
               t.stroke()),
             t.beginPath(),
-            t.roundRect(r - 19, badgeY - 10, 38, 20, 10),
-            (t.fillStyle = "rgba(4,8,6,.94)"),
+            t.roundRect(r - 17, badgeY - 9, 34, 18, 9),
+            (t.fillStyle = "rgba(4,8,6,.96)"),
             t.fill(),
             (t.strokeStyle = "neutral" === e.owner ? "#a8a79b" : i.main),
-            (t.lineWidth = 1.4),
+            (t.lineWidth = 1.25),
             t.stroke(),
             (t.fillStyle = "#fff8e8"),
-            (t.font = "900 12px var(--font-geist)"),
+            (t.font = "900 11px var(--font-geist)"),
             (t.textAlign = "center"),
-            t.fillText(String(Math.floor(e.units)), r, badgeY + 4));
+            t.fillText(String(Math.floor(e.units)), r, badgeY + 3.5));
           if (e.special) {
             let specialLabels = {
               source: "∞ SOURCE",
@@ -2595,10 +2646,10 @@ export default function Game() {
               (t.textAlign = "center"),
               (t.fillStyle = "rgba(4,8,6,.82)"),
               t.beginPath(),
-              t.roundRect(r - 30, spriteTop - 12, 60, 16, 8),
+              t.roundRect(r - 27, spriteTop - 9, 54, 14, 7),
               t.fill(),
               (t.fillStyle = "boss" === e.special ? "#ff846f" : "#f5d77f"),
-              t.fillText(label, r, spriteTop - 1));
+              t.fillText(label, r, spriteTop + 1));
           }
           if (e.specialization && !e.construction) {
             ((t.fillStyle = "#fff0a8"),
@@ -2772,8 +2823,13 @@ export default function Game() {
       }
       for (let e of f.current) {
         let r = e.age / 0.9,
-          n = 24 + (e.x + (e.vx || 0) * e.age) * b,
-          s = 44 + (e.y + (e.vy || 0) * e.age + (e.kind === "spark" ? 0.09 * e.age * e.age : 0)) * M;
+          n = E({ x: e.x + (e.vx || 0) * e.age }),
+          s = I({
+            y:
+              e.y +
+              (e.vy || 0) * e.age +
+              (e.kind === "spark" ? 0.09 * e.age * e.age : 0),
+          });
         if (e.kind === "spark") {
           (t.save(),
             (t.globalAlpha = 1 - r),
@@ -2849,11 +2905,17 @@ export default function Game() {
         h: r.height,
       };
     },
-    ec = (e, r, t, s) =>
-      n.current.find(
+    ec = (e, r, t, s) => {
+      let battlefield = getBattlefieldLayout(t, s);
+      return n.current.find(
         (n) =>
-          45 > Math.hypot(24 + n.x * (t - 48) - e, 44 + n.y * (s - 68) - r),
-      ),
+          48 >
+          Math.hypot(
+            battlefield.left + n.x * battlefield.width - e,
+            battlefield.top + n.y * battlefield.height - r,
+          ),
+      );
+    },
     ed = (e) => {
       let r = x.current,
         t = w.current;
@@ -3476,7 +3538,7 @@ export default function Game() {
                           (0, r.jsx)("small", {
                             children: commandUi.targeting
                               ? "ANNULER"
-                              : "BANNIÈRE",
+                              : "ACTIVER",
                           }),
                         ],
                       }),
