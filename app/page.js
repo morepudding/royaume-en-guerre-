@@ -534,7 +534,7 @@ let n = (e, r, t, n, s, a, l, i) => ({
     e.bases.map((r) => ({
       ...r,
       kind:
-        e.id >= 7 && !r.special && ["village", "tower"].includes(r.kind)
+        e.id >= 2 && !r.special && ["village", "tower"].includes(r.kind)
           ? "city"
           : r.kind,
       specialization: null,
@@ -557,20 +557,20 @@ let n = (e, r, t, n, s, a, l, i) => ({
     ],
     2: [
       {
-        title: "Les villages produisent vite",
-        text: "Capture les villages pour accélérer ton économie.",
+        title: "Bâtis ton premier village",
+        text: "Capture une ville, touche-la puis transforme-la en village productif.",
       },
     ],
     3: [
       {
-        title: "Une forteresse résiste",
-        text: "Sa défense réduit les assauts. Accumule une force supérieure.",
+        title: "Débloque la forteresse",
+        text: "Une ville peut maintenant devenir un village ou une forteresse résistante.",
       },
     ],
     4: [
       {
-        title: "Les tours accélèrent",
-        text: "Capture une tour, puis active RAVITAILLEMENT pour renforcer le front.",
+        title: "Débloque la tour",
+        text: "Les trois constructions sont disponibles. La tour accélère les armées qui en partent.",
       },
     ],
   },
@@ -733,16 +733,22 @@ const developmentById = Object.values(developmentChoices)
   .flat()
   .reduce((choices, choice) => ({ ...choices, [choice.id]: choice }), {});
 
-const getDevelopmentChoices = (base) => {
+const getDevelopmentChoices = (base, missionId = 15) => {
   if (
     !base ||
+    missionId < 2 ||
     base.special ||
     base.invulnerable ||
     base.construction ||
     base.specialization
   )
     return [];
-  return developmentChoices[base.kind] || [];
+  if (base.kind === "city") {
+    if (missionId === 2) return developmentChoices.city.slice(0, 1);
+    if (missionId === 3) return developmentChoices.city.slice(0, 2);
+    return developmentChoices.city;
+  }
+  return missionId >= 6 ? developmentChoices[base.kind] || [] : [];
 };
 
 const getBaseStats = (base) => {
@@ -762,6 +768,7 @@ const buildingNames = {
 
 const mission2AssetSources = {
   map: "/assets/mission-2/river-diorama.webp",
+  city: "/assets/mission-2/village.png",
   village: "/assets/mission-2/village.png",
   fortress: "/assets/mission-2/fortress.png",
 };
@@ -1100,9 +1107,9 @@ export default function Game() {
     }, []),
     startDevelopment = (0, t.useCallback)(
       (baseId, choiceId, owner = "humans") => {
-        if (h.current.id < 7 || "playing" !== g.current) return !1;
+        if (h.current.id < 2 || "playing" !== g.current) return !1;
         let base = n.current[baseId],
-          choice = getDevelopmentChoices(base).find(
+          choice = getDevelopmentChoices(base, h.current.id).find(
             (option) => option.id === choiceId,
           ),
           reserve = "humans" === owner ? 1 : 6;
@@ -1426,12 +1433,12 @@ export default function Game() {
           et("Une nouvelle vague approche");
         }
         let mind = orcMind.current;
-        if (L.id >= 7 && T.current >= mind.nextBuildAt) {
+        if (L.id >= 2 && T.current >= mind.nextBuildAt) {
           let buildCandidates = n.current
             .filter(
               (base) =>
                 base.owner === "orcs" &&
-                getDevelopmentChoices(base).length > 0,
+                getDevelopmentChoices(base, L.id).length > 0,
             )
             .map((base) => {
               let neighborIds = L.roads
@@ -2253,7 +2260,7 @@ export default function Game() {
             T.current < commandPower.current.buffUntil;
         let mission2Sprite =
           2 === L.id &&
-          ["village", "fortress"].includes(e.kind) &&
+          ["city", "village", "fortress"].includes(e.kind) &&
           mission2Art.current[e.kind];
         if (mission2Sprite?.complete && mission2Sprite.naturalWidth) {
           let scale = Math.max(0.72, Math.min(1, c / 460)),
@@ -2539,7 +2546,7 @@ export default function Game() {
       ) {
         if (r === t) {
           let base = n.current[r];
-          h.current.id >= 7 &&
+          h.current.id >= 2 &&
             base?.owner === "humans" &&
             !base.special &&
             !base.invulnerable &&
@@ -2586,7 +2593,9 @@ export default function Game() {
     eh = c[O]?.[Q],
     buildBase = null === buildMenu ? null : n.current[buildMenu],
     buildOptions =
-      buildBase?.owner === "humans" ? getDevelopmentChoices(buildBase) : [],
+      buildBase?.owner === "humans"
+        ? getDevelopmentChoices(buildBase, O)
+        : [],
     activeSpecialization = buildBase?.specialization
       ? developmentById[buildBase.specialization]
       : null,
@@ -2977,34 +2986,16 @@ export default function Game() {
                     (0, r.jsxs)("div", {
                       className: "intro-power",
                       children: [
-                        (0, r.jsx)("span", { children: "♛" }),
-                        (0, r.jsxs)("p", {
-                          children: [
-                            (0, r.jsx)("small", {
-                              children: "NOUVEAU POUVOIR",
-                            }),
-                            (0, r.jsx)("b", {
-                              children: "La Bannière du Roi",
-                            }),
-                            "Une fois la jauge pleine, rallie 25 % des garnisons voisines et accélère la production de la base choisie.",
-                          ],
-                        }),
-                      ],
-                    }),
-                  7 === missionIntro.id &&
-                    (0, r.jsxs)("div", {
-                      className: "intro-power",
-                      children: [
                         (0, r.jsx)("span", { children: "⚒" }),
                         (0, r.jsxs)("p", {
                           children: [
                             (0, r.jsx)("small", {
-                              children: "NOUVELLE MÉCANIQUE",
+                              children: "NOUVELLES MÉCANIQUES",
                             }),
                             (0, r.jsx)("b", {
-                              children: "Les bâtisseurs du Royaume",
+                              children: "Spécialisations & Bannière",
                             }),
-                            "Touche une ville alliée pour en faire un village, une tour ou une forteresse, puis spécialise-la.",
+                            "Tes bâtiments peuvent maintenant se spécialiser. La Bannière rallie aussi les garnisons quand sa jauge est pleine.",
                           ],
                         }),
                       ],
@@ -3375,7 +3366,7 @@ export default function Game() {
                       (0, r.jsxs)("p", {
                         children: [
                           (0, r.jsx)("b", { children: "Ville niveau I" }),
-                          "À partir de la mission 7, la majorité des positions n’a aucun bonus. Touche une ville alliée pour choisir sa fonction.",
+                          "Dès la mission 2, la majorité des positions n’a aucun bonus. Le village se débloque en mission 2, la forteresse en mission 3 et la tour en mission 4.",
                         ],
                       }),
                       (0, r.jsxs)("p", {
@@ -3429,7 +3420,7 @@ export default function Game() {
                           (0, r.jsx)("b", {
                             children: "Spécialisations",
                           }),
-                          "Chaque village, tour ou forteresse peut évoluer une seconde fois. Les chantiers coûtent des soldats et peuvent être interrompus par une capture.",
+                          "Dès la mission 6, chaque village, tour ou forteresse peut évoluer une seconde fois. Les chantiers coûtent des soldats et sont interrompus par une capture.",
                         ],
                       }),
                     ],

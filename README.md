@@ -11,7 +11,7 @@ Cette version contient :
 - des terrains, routes, armées, forteresses et impacts retravaillés ;
 - une interface de bataille plus discrète qui préserve le champ de jeu ;
 - la Bannière du Roi à partir de la mission 6, alimentée par les captures et les victoires sur les routes ;
-- les villes de niveau I à partir de la mission 7, à transformer en village, forteresse ou tour puis à spécialiser ;
+- les villes de niveau I à partir de la mission 2 : village en mission 2, forteresse en mission 3, tour en mission 4, puis spécialisations en mission 6 ;
 - des chantiers payés en soldats, vulnérables aux captures, également utilisés par l’IA orque ;
 - une interface pensée pour le mobile et le mode paysage ;
 - une progression sauvegardée localement dans le navigateur.
