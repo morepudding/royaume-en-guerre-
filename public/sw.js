@@ -1,6 +1,6 @@
 const CACHE_PREFIX = "royaumes-";
-const PRECACHE = "royaumes-precache-v10";
-const RUNTIME = "royaumes-runtime-v10";
+const PRECACHE = "royaumes-precache-v11";
+const RUNTIME = "royaumes-runtime-v11";
 
 const CORE_URLS = [
   "/",
@@ -11,15 +11,9 @@ const CORE_URLS = [
   "/assets/buildings/orc-tower.webp",
   "/assets/buildings/orc-village.webp",
   "/assets/mission-2/fortress.png",
-  "/assets/mission-2/river-diorama.webp",
   "/assets/mission-2/village.png",
-];
-
-const OPTIONAL_MAP_URLS = [
-  ...Array.from(
-    { length: 15 },
-    (_, index) => `/assets/maps/mission-${String(index + 1).padStart(2, "0")}.webp`,
-  ),
+  "/assets/mission-07/frontier-city.png",
+  "/assets/mission-07/royal-convoy.png",
 ];
 
 const canCache = response =>
@@ -34,7 +28,6 @@ const cacheResponse = async (cacheName, request, response) => {
 const precacheAppShell = async () => {
   const cache = await caches.open(PRECACHE);
   await cache.addAll(CORE_URLS);
-  await Promise.allSettled(OPTIONAL_MAP_URLS.map(url => cache.add(url)));
 
   const shell = await cache.match("/");
   if (!shell) return;

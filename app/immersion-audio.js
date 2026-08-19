@@ -144,6 +144,37 @@ export function createImmersionAudio() {
       case "magic": [293.66, 440, 587.33].forEach((note, i) => oscillator(note, 0.48, 0.065, "sine", sfx, i * 0.06)); break;
       case "repair": noise(0.12, 0.1); oscillator(196, 0.18, 0.08, "square"); oscillator(392, 0.35, 0.08, "triangle", sfx, 0.13); break;
       case "saved": oscillator(523.25, 0.18, 0.07); oscillator(783.99, 0.34, 0.065, "sine", sfx, 0.08); break;
+      case "convoy-start":
+        noise(0.24, 0.07);
+        [196, 293.66, 392].forEach((note, i) =>
+          oscillator(note, 0.34, 0.065, "triangle", sfx, i * 0.09),
+        );
+        break;
+      case "ambush-warning":
+        oscillator(98, 0.7, 0.12, "sawtooth");
+        oscillator(146.83, 0.42, 0.075, "square", sfx, 0.16);
+        break;
+      case "convoy-hit":
+        noise(0.34, 0.23);
+        oscillator(65.41, 0.46, 0.15, "sawtooth");
+        oscillator(174.61, 0.16, 0.08, "square", sfx, 0.04);
+        break;
+      case "camp-cleared":
+        noise(0.16, 0.08);
+        [261.63, 392, 523.25].forEach((note, i) =>
+          oscillator(note, 0.42, 0.07, "triangle", sfx, i * 0.08),
+        );
+        break;
+      case "final-assault":
+        [73.42, 73.42, 98].forEach((note, i) =>
+          oscillator(note, 0.7, 0.14, "sawtooth", sfx, i * 0.22),
+        );
+        break;
+      case "convoy-arrival":
+        [293.66, 392, 493.88, 587.33, 783.99].forEach((note, i) =>
+          oscillator(note, 0.75, 0.085, "triangle", sfx, i * 0.11),
+        );
+        break;
       case "betrayal": oscillator(246.94, 0.55, 0.08, "sawtooth"); oscillator(116.54, 0.8, 0.11, "sine", sfx, 0.1); break;
       case "victory": [293.66, 369.99, 440, 587.33].forEach((note, i) => oscillator(note, 0.7, 0.09, "triangle", sfx, i * 0.14)); break;
       case "defeat": [220, 185, 146.83, 110].forEach((note, i) => oscillator(note, 0.85, 0.085, "sawtooth", sfx, i * 0.16)); break;

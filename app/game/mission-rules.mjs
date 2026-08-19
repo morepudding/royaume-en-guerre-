@@ -5,6 +5,11 @@
  * mutation so a frame can ask for a decision without changing game state.
  */
 
+import {
+  ESCORT_INTEGRITY_CROWN,
+  ESCORT_SPEED_CROWN_SECONDS,
+} from "./escort-director.mjs";
+
 export const CROWN_IDS = Object.freeze(["victory", "secondary", "mastery"]);
 
 const EMPTY_CROWN_SET = Object.freeze({
@@ -105,10 +110,14 @@ export function getCrownDefinitions(mission) {
         victory,
         crown(
           "secondary",
-          "Livrer le convoi avec au moins 50 % d’intégrité",
+          `Livrer le convoi avec au moins ${ESCORT_INTEGRITY_CROWN} % d’intégrité`,
           "INTÉGRITÉ",
         ),
-        crown("mastery", "Garder toute la route sous contrôle", "ROUTE"),
+        crown(
+          "mastery",
+          `Atteindre la sortie avant ${formatPar(ESCORT_SPEED_CROWN_SECONDS)}`,
+          "RAPIDITÉ",
+        ),
       ];
     case "evacuation":
       return [
@@ -212,7 +221,12 @@ export function evaluateMissionOutcome({
       const pathLength = mission.path?.length ?? 0;
       if (runtime.caravanDestroyed || Number(runtime.caravanHealth) <= 0)
         return "lost";
-      if (pathLength > 0 && runtime.caravanIndex >= pathLength - 1) return "won";
+      if (
+        pathLength > 0 &&
+        runtime.caravanIndex >= pathLength - 1 &&
+        runtime.caravanStatus === "arrived"
+      )
+        return runtime.caravanArrivalReady === true ? "won" : null;
       return humansAlive ? null : "lost";
     }
 
@@ -287,10 +301,8 @@ export function evaluateMissionCrowns({
       const health = Number.isFinite(runtime.caravanHealth)
         ? runtime.caravanHealth
         : 100;
-      secondary = health >= 50;
-      mastery =
-        !runtime.caravanRouteBrokenEver &&
-        (mission.path?.every((id) => ownerOf(bases, id) === "humans") ?? false);
+      secondary = health >= ESCORT_INTEGRITY_CROWN;
+      mastery = elapsed <= ESCORT_SPEED_CROWN_SECONDS;
       break;
     }
     case "evacuation": {

@@ -11,6 +11,22 @@ import {
   mergeCrownSets,
   normalizeCrownProgress,
 } from "./game/mission-rules.mjs";
+import {
+  advanceEscortConvoy,
+  advanceEscortDirector,
+  applyBannerEscortRescue,
+  applyEscortDamage,
+  canRaidHitConvoy,
+  createEscortRuntime,
+  isConvoyNearRelay,
+} from "./game/escort-director.mjs";
+import {
+  canvasRoadCurve,
+  getDirectedRoadCurve,
+  pointOnRoad,
+  roadLength,
+  tangentOnRoad,
+} from "./game/route-geometry.mjs";
 
 const r = { Fragment, jsx, jsxs };
 const t = React;
@@ -202,20 +218,23 @@ let n = (e, r, t, n, s, a, l, i) => ({
       name: "Le Convoi du Roi",
       region: "Route des Cendres",
       briefing:
-        "Ouvre chaque relais avant l’arrivée du convoi royal et garde la route derrière lui.",
+        "Ouvre la route, garde un relais en arrière ou frappe le camp de pillards avant l’assaut final.",
       objective: "Escorte la caravane jusqu’à la sortie",
-      par: 95,
+      par: 90,
       terrain: "plain",
       mode: "escort",
       path: [0, 2, 3, 4, 5],
+      campId: 6,
+      convoySpeed: 0.056,
+      convoyRetreatSpeed: 0.085,
       bases: [
-        n(0, 0.07, 0.5, "humans", 38, "fortress"),
-        n(1, 0.92, 0.2, "orcs", 34, "fortress"),
-        n(2, 0.26, 0.5, "neutral", 8, "village"),
-        n(3, 0.46, 0.5, "neutral", 14, "tower"),
-        n(4, 0.67, 0.5, "neutral", 10, "village"),
-        n(5, 0.91, 0.72, "neutral", 4, "fortress", "exit"),
-        n(6, 0.67, 0.18, "orcs", 20, "village"),
+        n(0, 0.07, 0.67, "humans", 40, "fortress"),
+        n(1, 0.92, 0.2, "orcs", 34, "fortress", "war-host", !0),
+        n(2, 0.26, 0.65, "neutral", 8, "city"),
+        n(3, 0.47, 0.51, "neutral", 14, "city"),
+        n(4, 0.68, 0.62, "neutral", 11, "city"),
+        n(5, 0.92, 0.69, "neutral", 5, "fortress", "exit"),
+        n(6, 0.66, 0.23, "orcs", 21, "village", "raider-camp"),
       ],
       roads: [
         [0, 2],
@@ -226,6 +245,8 @@ let n = (e, r, t, n, s, a, l, i) => ({
         [6, 4],
         [1, 4],
         [3, 6],
+        [2, 6],
+        [1, 2],
       ],
     },
     {
@@ -530,10 +551,7 @@ let n = (e, r, t, n, s, a, l, i) => ({
     bridge: 0,
     humanScore: 0,
     orcScore: 0,
-    caravanIndex: 0,
-    caravanProgress: 0,
-    caravanHealth: 100,
-    caravanRouteBrokenEver: !1,
+    ...createEscortRuntime(),
     betrayalDone: !1,
     betrayedBaseId: null,
     dawnDone: !1,
@@ -553,6 +571,7 @@ let n = (e, r, t, n, s, a, l, i) => ({
           : r.kind,
       specialization: null,
       construction: null,
+      missionId: e.id,
     })),
   c = {
     1: [
@@ -598,8 +617,8 @@ let n = (e, r, t, n, s, a, l, i) => ({
     7: {
       chapter: "ACTE II · LA ROUTE DU ROI",
       scene:
-        "Les étendards royaux avancent dans un nuage de cendre. Chaque relais conquis ouvre quelques mètres de route au convoi.",
-      rule: "Escorte · Sécurise le prochain relais avant l’arrivée du convoi",
+        "La caravane attend ton signal. Chaque relais sûr l’attire vers la sortie ; le camp du nord peut être détruit, mais l’horloge tourne.",
+      rule: "Escorte · Sécurise le prochain relais, puis choisis vitesse ou sûreté",
     },
     8: {
       chapter: "ACTE II · LE SANCTUAIRE",
@@ -743,6 +762,15 @@ const developmentChoices = {
   ],
 };
 
+const missionSevenDevelopmentChoices = developmentChoices.city.map((choice) => {
+  const tuning = {
+    "raise-village": { description: "+100 % production", cost: 8, duration: 4 },
+    "raise-fortress": { description: "+65 % défense", cost: 8, duration: 4 },
+    "raise-tower": { description: "+90 % vitesse", cost: 8, duration: 4 },
+  }[choice.id];
+  return { ...choice, ...tuning };
+});
+
 const developmentById = Object.values(developmentChoices)
   .flat()
   .reduce((choices, choice) => ({ ...choices, [choice.id]: choice }), {});
@@ -758,6 +786,7 @@ const getDevelopmentChoices = (base, missionId = 15) => {
   )
     return [];
   if (base.kind === "city") {
+    if (missionId === 7) return missionSevenDevelopmentChoices;
     if (missionId === 2) return developmentChoices.city.slice(0, 1);
     if (missionId === 3) return developmentChoices.city.slice(0, 2);
     return developmentChoices.city;
@@ -768,6 +797,14 @@ const getDevelopmentChoices = (base, missionId = 15) => {
 const getBaseStats = (base) => {
   let baseStats = a[base.kind] || a.city,
     specialization = developmentById[base.specialization];
+  if (base.missionId === 7 && !specialization) {
+    const missionTuning = {
+      village: { production: 2, defense: 1, speed: 1 },
+      fortress: { production: 0.9, defense: 1.65, speed: 1 },
+      tower: { production: 1.1, defense: 1, speed: 1.9 },
+    }[base.kind];
+    if (missionTuning) return missionTuning;
+  }
   return specialization?.stats
     ? { ...baseStats, ...specialization.stats }
     : baseStats;
@@ -831,9 +868,9 @@ const buildingNames = {
 };
 
 const getBattlefieldLayout = (width, height) => {
-  let horizontal = Math.max(58, Math.min(78, 0.065 * width)),
-    top = Math.max(88, Math.min(104, 0.18 * height)),
-    bottom = Math.max(78, Math.min(88, 0.15 * height));
+  let horizontal = Math.max(34, Math.min(54, 0.045 * width)),
+    top = Math.max(48, Math.min(62, 0.12 * height)),
+    bottom = Math.max(58, Math.min(68, 0.16 * height));
   return {
     left: horizontal,
     top,
@@ -846,13 +883,13 @@ const publicAssetBase = "";
 
 const buildingAssetSources = {
   humans: {
-    city: `${publicAssetBase}/assets/mission-2/village.png`,
+    city: `${publicAssetBase}/assets/mission-07/frontier-city.png`,
     village: `${publicAssetBase}/assets/mission-2/village.png`,
     fortress: `${publicAssetBase}/assets/mission-2/fortress.png`,
     tower: `${publicAssetBase}/assets/buildings/human-tower.webp`,
   },
   neutral: {
-    city: `${publicAssetBase}/assets/mission-2/village.png`,
+    city: `${publicAssetBase}/assets/mission-07/frontier-city.png`,
     village: `${publicAssetBase}/assets/mission-2/village.png`,
     fortress: `${publicAssetBase}/assets/mission-2/fortress.png`,
     tower: `${publicAssetBase}/assets/buildings/human-tower.webp`,
@@ -1111,6 +1148,7 @@ export default function Game() {
     audioEngine = (0, t.useRef)(null),
     battleFx = (0, t.useRef)({ shake: 0, flash: 0, color: "242,196,93" }),
     buildingArt = (0, t.useRef)({ humans: {}, neutral: {}, orcs: {} }),
+    convoyArt = (0, t.useRef)(null),
     missionMapArt = (0, t.useRef)({}),
     suspensions = (0, t.useRef)(new Set()),
     [P, A] = (0, t.useState)("home"),
@@ -1215,20 +1253,51 @@ export default function Game() {
     };
   }, []);
   (0, t.useEffect)(() => {
+    if (buildMenu == null) {
+      suspensions.current.delete("build-menu");
+      y.current = performance.now();
+      if (P === "battle" && E === "playing" && !suspensions.current.size)
+        audioEngine.current?.resumeBattle?.();
+    } else {
+      suspensions.current.add("build-menu");
+      audioEngine.current?.pause?.();
+    }
+    return () => suspensions.current.delete("build-menu");
+  }, [E, P, buildMenu]);
+  (0, t.useEffect)(() => {
     let cancelled = !1;
+    let targetsBySource = new Map();
     for (let [faction, sources] of Object.entries(buildingAssetSources)) {
       for (let [kind, source] of Object.entries(sources)) {
-        let image = new Image();
-        image.decoding = "async";
-        image.onload = () => {
-          if (!cancelled) buildingArt.current[faction][kind] = image;
-        };
-        image.onerror = () => {
-          if (!cancelled) delete buildingArt.current[faction][kind];
-        };
-        image.src = source;
+        let targets = targetsBySource.get(source) || [];
+        targets.push([faction, kind]);
+        targetsBySource.set(source, targets);
       }
     }
+    for (let [source, targets] of targetsBySource) {
+      let image = new Image();
+        image.decoding = "async";
+        image.onload = () => {
+        if (!cancelled)
+          for (let [faction, kind] of targets)
+            buildingArt.current[faction][kind] = image;
+        };
+        image.onerror = () => {
+        if (!cancelled)
+          for (let [faction, kind] of targets)
+            delete buildingArt.current[faction][kind];
+        };
+        image.src = source;
+    }
+    let convoyImage = new Image();
+    convoyImage.decoding = "async";
+    convoyImage.onload = () => {
+      if (!cancelled) convoyArt.current = convoyImage;
+    };
+    convoyImage.onerror = () => {
+      if (!cancelled) convoyArt.current = null;
+    };
+    convoyImage.src = "/assets/mission-07/royal-convoy.png";
     return () => {
       cancelled = !0;
     };
@@ -1284,11 +1353,17 @@ export default function Game() {
       audioEngine.current.play(e);
     }, []),
     impactFeedback = (0, t.useCallback)((e, r, t, n = 1) => {
-      battleFx.current.shake = Math.max(battleFx.current.shake, 7 * n);
+      let reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")
+          .matches,
+        particleCount = reducedMotion ? 3 : 9 + 5 * n;
+      battleFx.current.shake = Math.max(
+        battleFx.current.shake,
+        (reducedMotion ? 2 : 7) * n,
+      );
       battleFx.current.flash = Math.max(battleFx.current.flash, 0.16 * n);
       battleFx.current.color = t === l.orcs.main ? "232,93,72" : "242,196,93";
-      for (let s = 0; s < 9 + 5 * n; s++) {
-        let a = (Math.PI * 2 * s) / (9 + 5 * n) + Math.random() * 0.35;
+      for (let s = 0; s < particleCount; s++) {
+        let a = (Math.PI * 2 * s) / particleCount + Math.random() * 0.35;
         f.current.push({
           id: C.current++,
           x: e,
@@ -1538,7 +1613,7 @@ export default function Game() {
         et("Choisis une base alliée"));
     }, [et, immersiveSound]),
     ei = (0, t.useCallback)(
-      (e, r, t, s) => {
+      (e, r, t, s, metadata = null) => {
         if ("playing" !== g.current || "battle" !== p.current || !en(e, r))
           return !1;
         let i = n.current[e];
@@ -1568,6 +1643,7 @@ export default function Game() {
               "orcs" === n.current[h.current.specialIds?.[0]]?.owner
                 ? 1.25
                 : 1),
+            ...(metadata || {}),
           }),
           f.current.push({
             id: C.current++,
@@ -1606,6 +1682,14 @@ export default function Game() {
           let s = n.current[r];
           s?.owner === "humans" && r !== e && ei(r, e, "humans", 0.25) && a++;
         }
+        let escortRescue = null;
+        if (
+          h.current.mode === "escort" &&
+          isConvoyNearRelay(h.current, k.current, e)
+        ) {
+          escortRescue = applyBannerEscortRescue(k.current, T.current);
+          Object.assign(k.current, escortRescue);
+        }
         return (
           (r.charge = 0),
           (r.targeting = !1),
@@ -1626,7 +1710,9 @@ export default function Game() {
           er(920, 0.24, 0.055),
           navigator.vibrate?.([30, 25, 65]),
           et(
-            a
+            escortRescue
+              ? `Le convoi est protégé 8 s${escortRescue.bannerRepair ? ` · +${Math.ceil(escortRescue.bannerRepair)} intégrité` : ""}`
+              : a
               ? `La Bannière rallie ${a} garnison${a > 1 ? "s" : ""} !`
               : "La Bannière renforce la production !",
           ),
@@ -1759,24 +1845,86 @@ export default function Game() {
             "orcs" === e.owner && (P.orcScore += N));
         }
         if ("escort" === L.mode && L.path) {
-          let securedRoute = L.path
-              .slice(0, P.caravanIndex + 1)
-              .every((baseId) => "humans" === n.current[baseId]?.owner),
-            nextRelay = L.path[P.caravanIndex + 1];
-          if (!securedRoute) {
-            P.caravanProgress = Math.max(0, P.caravanProgress - 0.22 * N);
-            P.caravanHealth = Math.max(0, P.caravanHealth - 9 * N);
-            P.caravanRouteBrokenEver = !0;
-          } else {
-            P.caravanHealth = Math.min(100, P.caravanHealth + 1.4 * N);
-            void 0 !== nextRelay &&
-              "humans" === n.current[nextRelay]?.owner &&
-              ((P.caravanProgress += 0.16 * N),
-              P.caravanProgress >= 1 &&
-                (P.caravanIndex++,
-                (P.caravanProgress = 0),
-                et("Le convoi atteint un relais")));
+          let previousIndex = P.caravanIndex;
+          Object.assign(P, advanceEscortConvoy(P, L, n.current, N));
+          let directorStep = advanceEscortDirector(P.escortDirector, {
+            mission: L,
+            runtime: P,
+            bases: n.current,
+            elapsed: T.current,
+          });
+          P.escortDirector = directorStep.state;
+          if (P.caravanIndex > previousIndex && P.caravanStatus !== "arrived") {
+            immersiveSound("saved");
+            navigator.vibrate?.(22);
+            et(`Relais ${P.caravanIndex + 1}/${L.path.length} atteint`);
           }
+          for (let event of directorStep.events) {
+            if (event.type === "departure") {
+              immersiveSound("convoy-start");
+              er(610, 0.18, 0.05);
+              navigator.vibrate?.([20, 24, 35]);
+              et("Le convoi se met en marche");
+            } else if (event.type === "camp-neutralized") {
+              let repair = P.campRepairGranted ? 0 : event.repair;
+              P.campRepairGranted = !0;
+              P.caravanHealth = Math.min(100, P.caravanHealth + repair);
+              immersiveSound("camp-cleared");
+              impactFeedback(
+                n.current[L.campId || 6].x,
+                n.current[L.campId || 6].y,
+                l.humans.main,
+                1.2,
+              );
+              navigator.vibrate?.([35, 25, 55]);
+              et(`Camp neutralisé · raids affaiblis${repair ? ` · +${repair} intégrité` : ""}`);
+            } else if (event.type === "telegraph") {
+              let target = n.current[event.raid.targetId];
+              f.current.push({
+                id: C.current++,
+                x: target.x,
+                y: target.y,
+                color: l.orcs.main,
+                text: event.raid.id === "final-assault" ? "ASSAUT FINAL" : "EMBUSCADE",
+                age: 0,
+              });
+              immersiveSound(
+                event.raid.id === "final-assault" ? "final-assault" : "ambush-warning",
+              );
+              navigator.vibrate?.([24, 45, 24]);
+              et(event.raid.label);
+            } else if (event.type === "launch-raid") {
+              let source = n.current[event.raid.sourceId];
+              if (source?.owner === "orcs") {
+                source.units = Math.max(source.units, event.raid.units + 6);
+                ei(
+                  event.raid.sourceId,
+                  event.raid.targetId,
+                  "orcs",
+                  (event.raid.units + 0.01) / source.units,
+                  {
+                    escortRaid: {
+                      id: event.raid.id,
+                      damage: event.raid.damage,
+                    },
+                  },
+                );
+              }
+            } else if (event.type === "arrival") {
+              P.caravanArrivalAt = T.current;
+              immersiveSound("convoy-arrival");
+              battleFx.current.flash = 0.75;
+              battleFx.current.color = "242,196,93";
+              navigator.vibrate?.([40, 35, 80, 35, 110]);
+              et("Le Convoi du Roi franchit la sortie !");
+            }
+          }
+          if (
+            P.caravanStatus === "arrived" &&
+            P.caravanArrivalAt != null &&
+            T.current >= P.caravanArrivalAt + 1.25
+          )
+            P.caravanArrivalReady = true;
         }
         if (
           "boss" === L.mode &&
@@ -1928,7 +2076,7 @@ export default function Game() {
             );
         }
         let mind = orcMind.current;
-        if (L.id >= 2 && T.current >= mind.nextBuildAt) {
+        if (L.id >= 2 && L.mode !== "escort" && T.current >= mind.nextBuildAt) {
           let buildCandidates = n.current
             .filter(
               (base) =>
@@ -1994,7 +2142,8 @@ export default function Game() {
         let thinkDelay = L.id <= 2 ? 4.4 : L.id <= 5 ? 3.4 : 2.65,
           tutorialReleased =
             L.id > 4 || d.current.some((e) => "humans" === e.owner);
-        if (mind.plan && T.current >= mind.plan.executeAt) {
+        if ("escort" === L.mode) mind.plan = null;
+        else if (mind.plan && T.current >= mind.plan.executeAt) {
           let launched = 0;
           for (let order of mind.plan.orders) {
             let source = n.current[order.from],
@@ -2186,17 +2335,22 @@ export default function Game() {
             n.current[route.from]?.owner === route.owner &&
             n.current[route.to]?.owner === route.owner,
         );
-        for (let e of m.current)
-          ((e.clock += N),
-            e.clock >= 3.2 && ((e.clock = 0), ei(e.from, e.to, e.owner, 0.25)));
+        for (let e of m.current) {
+          e.clock += N;
+          if (e.clock < 3.2) continue;
+          e.clock = 0;
+          let source = n.current[e.from],
+            safeReserve = "humans" === e.owner ? 12 : 6,
+            available = Math.max(0, Math.floor(source.units) - safeReserve),
+            send = Math.min(available, Math.max(1, Math.floor(source.units * 0.25)));
+          if (send > 0) ei(e.from, e.to, e.owner, (send + 0.01) / source.units);
+        }
         for (let e of d.current) {
-          let r = n.current[e.from],
-            t = n.current[e.to];
+          let curve = getDirectedRoadCurve(L.roads, n.current, e.from, e.to);
           ((e.previousProgress = e.progress),
             (e.progress +=
               N *
-              ((0.18 * e.speed) /
-                Math.max(Math.hypot(t.x - r.x, t.y - r.y), 0.16))));
+              ((0.18 * e.speed) / Math.max(roadLength(curve), 0.16))));
         }
         let e = new Set();
         for (let r = 0; r < d.current.length; r++)
@@ -2214,11 +2368,16 @@ export default function Game() {
                 t = 1 - a.progress;
               if (s.previousProgress <= t && r >= t - 0.035) {
                 let r = Math.min(s.units, a.units),
-                  t = n.current[s.from],
-                  l = n.current[s.to],
                   i = (s.progress + 1 - a.progress) / 2,
-                  o = t.x + (l.x - t.x) * i,
-                  u = t.y + (l.y - t.y) * i;
+                  curve = getDirectedRoadCurve(
+                    L.roads,
+                    n.current,
+                    s.from,
+                    s.to,
+                  ),
+                  collisionPoint = pointOnRoad(curve, i),
+                  o = collisionPoint.x,
+                  u = collisionPoint.y;
                 ((s.units -= r),
                   (a.units -= r),
                   ((s.owner === "humans" && s.units > 0 && a.units <= 0) ||
@@ -2246,6 +2405,23 @@ export default function Game() {
         )) {
           let t = n.current[r.to],
             s = t.owner;
+          if (
+            "escort" === L.mode &&
+            r.owner === "orcs" &&
+            r.escortRaid &&
+            canRaidHitConvoy(L, P, r.escortRaid, r.to)
+          ) {
+            let hit = applyEscortDamage(P, r.escortRaid.damage, T.current);
+            Object.assign(P, hit.runtime);
+            impactFeedback(t.x, t.y, l.orcs.main, hit.protected ? 0.7 : 1.35);
+            immersiveSound(hit.protected ? "magic" : "convoy-hit");
+            navigator.vibrate?.(hit.protected ? [20, 25, 20] : [70, 35, 95]);
+            et(
+              hit.protected
+                ? `La Bannière absorbe l’attaque · −${Math.ceil(hit.applied)}`
+                : `Le convoi est frappé · −${Math.ceil(hit.applied)} intégrité`,
+            );
+          }
           if (
             "bridge" === L.mode &&
             "worksite" === t.special &&
@@ -2511,47 +2687,80 @@ export default function Game() {
             P.bridge < (L.target || 40) &&
             ((e === L.lockedRoad[0] && r === L.lockedRoad[1]) ||
               (r === L.lockedRoad[0] && e === L.lockedRoad[1])),
-          fromX = E(s),
-          fromY = I(s),
-          toX = E(a),
-          toY = I(a),
-          angle = Math.atan2(toY - fromY, toX - fromX),
-          inset = 29,
-          startX = fromX + Math.cos(angle) * inset,
-          startY = fromY + Math.sin(angle) * inset,
-          endX = toX - Math.cos(angle) * inset,
-          endY = toY - Math.sin(angle) * inset,
-          curve = (((17 * e + 31 * r) % 3) - 1) * 7,
-          controlX = (startX + endX) / 2 - Math.sin(angle) * curve,
-          controlY = (startY + endY) / 2 + Math.cos(angle) * curve,
+          curve = canvasRoadCurve(
+            getDirectedRoadCurve(L.roads, n.current, e, r),
+            battlefield,
+          ),
+          pathIndex = L.path?.findIndex(
+            (id, index) =>
+              index < L.path.length - 1 &&
+              ((id === e && L.path[index + 1] === r) ||
+                (id === r && L.path[index + 1] === e)),
+          ),
+          isConvoyRoad = L.mode === "escort" && pathIndex >= 0,
+          isNextConvoyRoad =
+            isConvoyRoad && pathIndex === Math.min(P.caravanIndex, L.path.length - 2),
+          secured = s.owner === "humans" && a.owner === "humans",
+          threatened =
+            L.mode === "escort" &&
+            P.escortDirector?.pending?.some(
+              (raid) => raid.targetId === e || raid.targetId === r,
+            ),
           roadPath = () => {
             (t.beginPath(),
-              t.moveTo(startX, startY),
-              t.quadraticCurveTo(controlX, controlY, endX, endY));
+              t.moveTo(curve.start.x, curve.start.y),
+              t.quadraticCurveTo(
+                curve.control.x,
+                curve.control.y,
+                curve.end.x,
+                curve.end.y,
+              ));
           };
         (t.save(),
           (t.lineCap = "round"),
           (t.lineJoin = "round"),
           roadPath(),
-          (t.strokeStyle = l ? "rgba(67,16,13,.74)" : "rgba(26,20,14,.42)"),
-          (t.lineWidth = l ? 8 : 10),
+          (t.strokeStyle = l ? "rgba(67,16,13,.84)" : "rgba(20,15,11,.78)"),
+          (t.lineWidth = l ? 10 : isConvoyRoad ? 12 : 9),
           t.stroke(),
           roadPath(),
           (t.strokeStyle = l
             ? "rgba(255,111,91,.68)"
-            : "rgba(130,107,70,.42)"),
-          (t.lineWidth = l ? 3 : 5),
-          t.setLineDash(l ? [5, 8] : []),
+            : threatened
+              ? "rgba(232,93,72,.88)"
+              : secured
+                ? "rgba(232,198,113,.78)"
+                : isNextConvoyRoad
+                  ? "rgba(221,188,119,.72)"
+                  : "rgba(132,112,82,.62)"),
+          (t.lineWidth = l ? 3 : isConvoyRoad ? 5 : 4),
+          t.setLineDash(l || threatened ? [6, 8] : []),
+          (t.lineDashOffset = threatened ? -0.018 * performance.now() : 0),
           t.stroke(),
           t.setLineDash([]),
-          !l &&
+          !l && !threatened &&
             (roadPath(),
-            (t.strokeStyle = "rgba(232,211,164,.28)"),
+            (t.strokeStyle = isNextConvoyRoad
+              ? "rgba(255,235,178,.64)"
+              : "rgba(232,211,164,.25)"),
             (t.lineWidth = 1),
             t.stroke()),
           t.restore());
       }
-      let pendingOrcPlan = orcMind.current.plan;
+      let scriptedWarning = P.escortDirector?.pending?.[0],
+        pendingOrcPlan =
+          L.mode === "escort" && scriptedWarning
+            ? {
+                kind: "assault",
+                targetId: scriptedWarning.targetId,
+                orders: [
+                  {
+                    from: scriptedWarning.sourceId,
+                    to: scriptedWarning.targetId,
+                  },
+                ],
+              }
+            : orcMind.current.plan;
       if (pendingOrcPlan) {
         let pulse = 0.62 + 0.22 * Math.sin(0.012 * performance.now()),
           intentColor =
@@ -2561,13 +2770,23 @@ export default function Game() {
           let source = n.current[order.from],
             target = n.current[order.to];
           if (!source || !target) continue;
-          let fromX = E(source),
+          let roadCurve = getDirectedRoadCurve(
+              L.roads,
+              n.current,
+              order.from,
+              order.to,
+            ),
+            arrowPoint = pointOnRoad(roadCurve, 0.88),
+            arrowTangent = tangentOnRoad(roadCurve, 0.88),
+            fromX = E(source),
             fromY = I(source),
-            toX = E(target),
-            toY = I(target),
-            angle = Math.atan2(toY - fromY, toX - fromX),
-            arrowX = toX - 27 * Math.cos(angle),
-            arrowY = toY - 27 * Math.sin(angle);
+            arrowX = E(arrowPoint),
+            arrowY = I(arrowPoint),
+            angle = Math.atan2(
+              arrowTangent.y * battlefield.height,
+              arrowTangent.x * battlefield.width,
+            ),
+            intentCurve = canvasRoadCurve(roadCurve, battlefield);
           (t.save(),
             (t.globalAlpha = pulse),
             (t.strokeStyle = intentColor),
@@ -2578,7 +2797,12 @@ export default function Game() {
             (t.lineDashOffset = -0.02 * performance.now()),
             t.beginPath(),
             t.moveTo(fromX, fromY),
-            t.lineTo(arrowX, arrowY),
+            t.quadraticCurveTo(
+              intentCurve.control.x,
+              intentCurve.control.y,
+              arrowX,
+              arrowY,
+            ),
             t.stroke(),
             t.setLineDash([]),
             (t.fillStyle = intentColor),
@@ -2611,10 +2835,19 @@ export default function Game() {
       }
       for (let e of m.current) {
         let r = n.current[e.from],
-          s = n.current[e.to];
+          s = n.current[e.to],
+          supplyCurve = canvasRoadCurve(
+            getDirectedRoadCurve(L.roads, n.current, e.from, e.to),
+            battlefield,
+          );
         (t.beginPath(),
-          t.moveTo(E(r), I(r)),
-          t.lineTo(E(s), I(s)),
+          t.moveTo(supplyCurve.start.x, supplyCurve.start.y),
+          t.quadraticCurveTo(
+            supplyCurve.control.x,
+            supplyCurve.control.y,
+            supplyCurve.end.x,
+            supplyCurve.end.y,
+          ),
           (t.strokeStyle = l[e.owner].main),
           (t.globalAlpha = 0.5),
           t.setLineDash([3, 7]),
@@ -2627,96 +2860,210 @@ export default function Game() {
           r = n.current[L.path[e]],
           s = n.current[L.path[e + 1]],
           a = P.caravanIndex >= L.path.length - 1 ? 1 : P.caravanProgress,
-          l = E(r) + (E(s) - E(r)) * a,
-          i = I(r) + (I(s) - I(r)) * a;
-        ((t.fillStyle = "#f2c45d"),
-          t.fillRect(l - 10, i - 7, 20, 12),
-          (t.fillStyle = "#2c1b10"),
-          t.beginPath(),
-          t.arc(l - 6, i + 7, 3, 0, 7),
-          t.arc(l + 6, i + 7, 3, 0, 7),
-          t.fill(),
-          (t.fillStyle = "#fff3cf"),
-          (t.font = "800 9px var(--font-geist)"),
-          (t.textAlign = "center"),
-          t.fillText("CONVOI", l, i - 12));
+          convoyCurve = getDirectedRoadCurve(
+            L.roads,
+            n.current,
+            L.path[e],
+            L.path[e + 1],
+          ),
+          convoyPoint = pointOnRoad(convoyCurve, a),
+          convoyTangent = tangentOnRoad(convoyCurve, a),
+          convoyX = E(convoyPoint),
+          convoyY = I(convoyPoint),
+          convoyAngle = Math.atan2(
+            convoyTangent.y * battlefield.height,
+            convoyTangent.x * battlefield.width,
+          ),
+          convoyImage = convoyArt.current,
+          critical = P.caravanHealth <= 35,
+          protectedNow = T.current < (P.caravanProtectedUntil || 0),
+          threatened =
+            P.caravanDamageFlash > 0 ||
+            P.escortDirector?.pending?.some((raid) =>
+              isConvoyNearRelay(L, P, raid.targetId),
+            ),
+          convoyColor = critical || threatened ? "#ff735f" : "#f2c45d",
+          convoyWidth = Math.max(94, Math.min(124, 0.15 * o)),
+          convoyHeight = convoyWidth * (480 / 768),
+          bob =
+            P.caravanStatus === "moving"
+              ? 1.4 * Math.sin(0.018 * performance.now())
+              : 0;
+        t.save();
+        t.translate(convoyX, convoyY + bob);
+        t.rotate(convoyAngle);
+        t.fillStyle = "rgba(4,3,2,.58)";
+        t.beginPath();
+        t.ellipse(0, 13, convoyWidth * 0.39, 9, 0, 0, 7);
+        t.fill();
+        if (convoyImage?.complete && convoyImage.naturalWidth) {
+          t.globalAlpha = P.caravanStatus === "destroyed" ? 0.42 : 1;
+          t.drawImage(
+            convoyImage,
+            -convoyWidth / 2,
+            -convoyHeight * 0.72,
+            convoyWidth,
+            convoyHeight,
+          );
+          t.globalAlpha = 1;
+        }
+        if (protectedNow) {
+          t.strokeStyle = "rgba(255,235,166,.92)";
+          t.lineWidth = 3;
+          t.shadowColor = "rgba(242,196,93,.7)";
+          t.shadowBlur = 12;
+          t.beginPath();
+          t.ellipse(0, 0, convoyWidth * 0.5, convoyHeight * 0.42, 0, 0, 7);
+          t.stroke();
+          t.shadowBlur = 0;
+        }
+        t.rotate(-convoyAngle);
+        t.fillStyle = "rgba(5,6,5,.94)";
+        t.beginPath();
+        t.roundRect(-48, -convoyHeight * 0.68 - 19, 96, 10, 5);
+        t.fill();
+        t.fillStyle = convoyColor;
+        t.beginPath();
+        t.roundRect(
+          -46,
+          -convoyHeight * 0.68 - 17,
+          92 * Math.max(0, P.caravanHealth) / 100,
+          6,
+          3,
+        );
+        t.fill();
+        t.fillStyle = "#fff5d8";
+        t.font = "900 12px var(--font-geist)";
+        t.textAlign = "center";
+        t.fillText(
+          protectedNow
+            ? "PROTÉGÉ"
+            : P.caravanStatus === "moving"
+              ? "EN MARCHE"
+              : P.caravanStatus === "arrived"
+                ? "ARRIVÉ"
+                : "RELAIS À SÉCURISER",
+          0,
+          -convoyHeight * 0.68 - 25,
+        );
+        t.restore();
       }
       for (let e of d.current) {
         if ("fog" === L.mode && "orcs" === e.owner && !eo(e.from) && !eo(e.to))
           continue;
-        let r = n.current[e.from],
-          s = n.current[e.to],
-          a = E(r) + (E(s) - E(r)) * e.progress,
-          i = I(r) + (I(s) - I(r)) * e.progress,
+        let armyCurve = getDirectedRoadCurve(
+            L.roads,
+            n.current,
+            e.from,
+            e.to,
+          ),
+          armyPoint = pointOnRoad(armyCurve, e.progress),
+          trailPoint = pointOnRoad(armyCurve, Math.max(0, e.progress - 0.11)),
+          armyTangent = tangentOnRoad(armyCurve, e.progress),
+          a = E(armyPoint),
+          i = I(armyPoint),
           o = l[e.owner],
-          u = Math.atan2(I(s) - I(r), E(s) - E(r)),
-          c = 1.5 * Math.sin(0.012 * performance.now() + e.id);
+          u = Math.atan2(
+            armyTangent.y * battlefield.height,
+            armyTangent.x * battlefield.width,
+          ),
+          c = 1.4 * Math.sin(0.012 * performance.now() + e.id),
+          formationLevel = e.units >= 32 ? 3 : e.units >= 14 ? 2 : 1,
+          formation = [
+            [-8, -5],
+            [-8, 5],
+            [-1, 0],
+            [-16, -9],
+            [-16, 9],
+          ].slice(0, formationLevel === 3 ? 5 : formationLevel === 2 ? 3 : 2);
         (t.save(),
           (t.strokeStyle = o.main),
-          (t.globalAlpha = 0.18),
-          (t.lineWidth = 7),
+          (t.globalAlpha = 0.24),
+          (t.lineWidth = 6 + formationLevel),
           t.beginPath(),
-          t.moveTo(a - 22 * Math.cos(u), i - 22 * Math.sin(u)),
-          t.lineTo(a - 7 * Math.cos(u), i - 7 * Math.sin(u)),
+          t.moveTo(E(trailPoint), I(trailPoint)),
+          t.lineTo(a, i),
           t.stroke(),
           (t.globalAlpha = 1),
           t.translate(a, i + c),
           t.rotate(u),
           (t.shadowColor = o.glow),
-          (t.shadowBlur = 14),
-          (t.fillStyle = "rgba(5,9,7,.94)"),
+          (t.shadowBlur = 9));
+        for (let [soldierX, soldierY] of formation) {
+          t.fillStyle = "rgba(2,4,3,.62)";
+          t.beginPath();
+          t.ellipse(soldierX, soldierY + 5, 5, 2.5, 0, 0, 7);
+          t.fill();
+          t.fillStyle = o.dark;
+          t.beginPath();
+          t.roundRect(soldierX - 3, soldierY - 3, 7, 9, 3);
+          t.fill();
+          t.strokeStyle = o.main;
+          t.lineWidth = 1.6;
+          t.stroke();
+          t.fillStyle = "#e7dbc0";
+          t.beginPath();
+          t.arc(soldierX + 0.5, soldierY - 5, 2.7, 0, 7);
+          t.fill();
+          t.strokeStyle = "rgba(255,244,216,.7)";
+          t.lineWidth = 1;
+          t.beginPath();
+          t.moveTo(soldierX + 4, soldierY - 7);
+          t.lineTo(soldierX + 8, soldierY + 7);
+          t.stroke();
+        }
+        (t.shadowBlur = 0,
+          (t.strokeStyle = "#f8e9c7"),
+          (t.lineWidth = 1.5),
           t.beginPath(),
-          t.moveTo(13, 0),
-          t.lineTo(2, -11),
-          t.lineTo(-11, -8),
-          t.lineTo(-13, 0),
-          t.lineTo(-11, 8),
-          t.lineTo(2, 11),
-          t.closePath(),
-          t.fill(),
-          (t.strokeStyle = o.main),
-          (t.lineWidth = 2.5),
+          t.moveTo(5, -14 - 2 * formationLevel),
+          t.lineTo(5, 9),
           t.stroke(),
-          (t.shadowBlur = 0),
           (t.fillStyle = o.main),
           t.beginPath(),
-          t.moveTo(10, 0),
-          t.lineTo(-2, -6),
-          t.lineTo(-2, 6),
-          t.closePath(),
-          t.fill(),
-          (t.strokeStyle = "rgba(255,248,224,.65)"),
-          (t.lineWidth = 1),
-          t.beginPath(),
-          t.moveTo(-4, -12),
-          t.lineTo(-4, 11),
-          t.stroke(),
-          (t.fillStyle = o.main),
-          t.beginPath(),
-          t.moveTo(-4, -11),
-          t.lineTo(-13, -8),
-          t.lineTo(-4, -2),
+          t.moveTo(5, -13 - 2 * formationLevel),
+          t.lineTo(17 + 2 * formationLevel, -8 - formationLevel),
+          t.lineTo(5, -3 - formationLevel),
           t.closePath(),
           t.fill(),
           t.rotate(-u),
           (t.fillStyle = "rgba(5,8,7,.94)"),
           t.beginPath(),
-          t.roundRect(-15, -27, 30, 16, 8),
+          t.roundRect(-18, -31, 36, 20, 9),
           t.fill(),
           (t.strokeStyle = o.main),
-          (t.lineWidth = 1),
+          (t.lineWidth = 1.5),
           t.stroke(),
           (t.fillStyle = "#fff7df"),
-          (t.font = "900 10px var(--font-geist)"),
+          (t.font = "900 12px var(--font-geist)"),
           (t.textAlign = "center"),
-          t.fillText(String(Math.ceil(e.units)), 0, -16),
+          t.fillText(String(Math.ceil(e.units)), 0, -17),
           t.restore());
       }
       if (null !== x.current && j.current) {
         let e = n.current[x.current];
+        let orderCurve =
+          w.current != null && en(x.current, w.current)
+            ? canvasRoadCurve(
+                getDirectedRoadCurve(
+                  L.roads,
+                  n.current,
+                  x.current,
+                  w.current,
+                ),
+                battlefield,
+              )
+            : null;
         (t.beginPath(),
           t.moveTo(E(e), I(e)),
-          t.lineTo(j.current.x, j.current.y),
+          orderCurve
+            ? t.quadraticCurveTo(
+                orderCurve.control.x,
+                orderCurve.control.y,
+                orderCurve.end.x,
+                orderCurve.end.y,
+              )
+            : t.lineTo(j.current.x, j.current.y),
           (t.strokeStyle =
             null === w.current ? "rgba(242,196,93,.72)" : "#fff3c7"),
           (t.lineWidth = 3),
@@ -2726,9 +3073,11 @@ export default function Game() {
         let r = (E(e) + j.current.x) / 2,
           s = (I(e) + j.current.y) / 2;
         ((t.fillStyle = "rgba(5,9,7,.86)"),
-          t.fillRect(r - 20, s - 10, 40, 20),
+          t.beginPath(),
+          t.roundRect(r - 23, s - 12, 46, 24, 10),
+          t.fill(),
           (t.fillStyle = "#f8e9bf"),
-          (t.font = "900 10px var(--font-geist)"),
+          (t.font = "900 12px var(--font-geist)"),
           (t.textAlign = "center"),
           t.fillText(
             1 === v.current ? "TOUT" : 0.5 === v.current ? "½" : "¼",
@@ -2769,7 +3118,11 @@ export default function Game() {
             commandPower.current.targeting && "humans" === e.owner,
           isBannered =
             commandPower.current.buffBaseId === e.id &&
-            T.current < commandPower.current.buffUntil;
+            T.current < commandPower.current.buffUntil,
+          isNextRelay =
+            L.mode === "escort" &&
+            e.id === L.path?.[Math.min(P.caravanIndex + 1, L.path.length - 1)] &&
+            P.caravanStatus !== "arrived";
         let factionArt =
             "orcs" === e.owner
               ? buildingArt.current.orcs
@@ -2844,10 +3197,10 @@ export default function Game() {
               (t.shadowBlur = 0)),
             (t.filter =
               "neutral" === e.owner
-                ? "grayscale(.72) saturate(.48) brightness(.84) contrast(.92)"
+                ? "saturate(.68) brightness(.9) contrast(.96)"
                 : "orcs" === e.owner
-                  ? "saturate(.82) brightness(.86) contrast(.95)"
-                  : "saturate(.78) brightness(.9) contrast(.94)"),
+                  ? "saturate(1.08) brightness(.9) contrast(1.02)"
+                  : "saturate(1.02) brightness(.98) contrast(1.01)"),
             t.drawImage(
               buildingSprite,
               r - spriteWidth / 2,
@@ -2856,6 +3209,22 @@ export default function Game() {
               spriteHeight,
             ),
             (t.filter = "none"),
+            (t.strokeStyle = "rgba(239,226,190,.86)"),
+            (t.lineWidth = 1.5),
+            t.beginPath(),
+            t.moveTo(r + 0.3 * spriteWidth, spriteTop + 8),
+            t.lineTo(r + 0.3 * spriteWidth, spriteTop + 31),
+            t.stroke(),
+            (t.fillStyle = i.main),
+            t.beginPath(),
+            t.moveTo(r + 0.3 * spriteWidth, spriteTop + 9),
+            t.lineTo(r + 0.52 * spriteWidth, spriteTop + 14),
+            t.lineTo(r + 0.3 * spriteWidth, spriteTop + 21),
+            t.closePath(),
+            t.fill(),
+            (t.strokeStyle = "rgba(255,244,214,.7)"),
+            (t.lineWidth = 1),
+            t.stroke(),
             e.construction &&
               ((t.strokeStyle = "#fff0a8"),
               (t.lineWidth = 3),
@@ -2883,7 +3252,7 @@ export default function Game() {
             (t.lineWidth = 1.25),
             t.stroke(),
             (t.fillStyle = "#fff8e8"),
-            (t.font = "900 11px var(--font-geist)"),
+            (t.font = "900 12px var(--font-geist)"),
             (t.textAlign = "center"),
             t.fillText(String(Math.floor(e.units)), r, badgeY + 3.5));
           if (e.special) {
@@ -2894,24 +3263,32 @@ export default function Game() {
               exit: "SORTIE",
               worksite: "PONT",
               relic: "COURONNE",
+              "raider-camp": "CAMP DE PILLARDS",
+              "war-host": "HORDE EN MARCHE",
             },
-              label = specialLabels[e.special];
-            ((t.font = "900 8px var(--font-geist)"),
+              label = specialLabels[e.special],
+              labelWidth = label?.length > 10 ? 132 : 70;
+            ((t.font = "900 12px var(--font-geist)"),
               (t.textAlign = "center"),
               (t.fillStyle = "rgba(4,8,6,.82)"),
               t.beginPath(),
-              t.roundRect(r - 27, spriteTop - 9, 54, 14, 7),
+              t.roundRect(r - labelWidth / 2, spriteTop - 14, labelWidth, 20, 8),
               t.fill(),
               (t.fillStyle = "boss" === e.special ? "#ff846f" : "#f5d77f"),
               t.fillText(label, r, spriteTop + 1));
           }
           if (e.specialization && !e.construction) {
-            ((t.fillStyle = "#fff0a8"),
+            ((t.fillStyle = "rgba(4,8,6,.92)"),
+              t.beginPath(),
+              t.roundRect(r - 52, spriteTop - 17, 104, 20, 7),
+              t.fill(),
+              (t.fillStyle = "#fff0a8"),
               (t.font = "900 12px var(--font-geist)"),
               t.fillText(
-                developmentById[e.specialization]?.icon || "✦",
-                r + 0.42 * spriteWidth,
-                spriteTop + 8,
+                developmentById[e.specialization]?.label?.toUpperCase() ||
+                  "SPÉCIALISÉ",
+                r,
+                spriteTop - 2,
               ));
           }
           if (isBannered) {
@@ -2921,6 +3298,28 @@ export default function Game() {
               (t.font = "900 17px var(--font-geist)"),
               t.fillText("♛", r, spriteTop - (e.special ? 15 : 3)),
               (t.shadowBlur = 0));
+          }
+          if (isNextRelay) {
+            let markerY = spriteTop - (e.special ? 27 : 15),
+              markerPulse = 2 + 2 * Math.sin(0.008 * performance.now());
+            (t.fillStyle = "rgba(5,7,5,.94)",
+              t.beginPath(),
+              t.roundRect(r - 58, markerY - 22, 116, 20, 8),
+              t.fill(),
+              (t.strokeStyle = "#f2c45d"),
+              (t.lineWidth = 1.5),
+              t.stroke(),
+              (t.fillStyle = "#fff1c8"),
+              (t.font = "900 12px var(--font-geist)"),
+              (t.textAlign = "center"),
+              t.fillText("PROCHAIN RELAIS", r, markerY - 8),
+              (t.fillStyle = "#f2c45d"),
+              t.beginPath(),
+              t.moveTo(r - 6, markerY + markerPulse),
+              t.lineTo(r + 6, markerY + markerPulse),
+              t.lineTo(r, markerY + 9 + markerPulse),
+              t.closePath(),
+              t.fill());
           }
           t.restore();
           continue;
@@ -3059,6 +3458,17 @@ export default function Game() {
             (t.font = "900 17px var(--font-geist)"),
             t.fillText("♛", r, n - a - 13),
             (t.shadowBlur = 0)),
+          isNextRelay &&
+            ((t.fillStyle = "rgba(5,7,5,.94)"),
+            t.beginPath(),
+            t.roundRect(r - 58, n - a - 43, 116, 20, 8),
+            t.fill(),
+            (t.strokeStyle = "#f2c45d"),
+            (t.lineWidth = 1.5),
+            t.stroke(),
+            (t.fillStyle = "#fff1c8"),
+            (t.font = "900 12px var(--font-geist)"),
+            t.fillText("PROCHAIN RELAIS", r, n - a - 29)),
           e.special)
         ) {
           let s = {
@@ -3068,9 +3478,11 @@ export default function Game() {
             exit: "SORTIE",
             worksite: "PONT",
             relic: "COURONNE",
+            "raider-camp": "CAMP DE PILLARDS",
+            "war-host": "HORDE EN MARCHE",
           };
           ((t.fillStyle = "boss" === e.special ? "#ff846f" : "#f5d77f"),
-            (t.font = "900 8px var(--font-geist)"),
+            (t.font = "900 12px var(--font-geist)"),
             t.fillText(s[e.special], r, n - a - 14));
         }
         t.restore();
@@ -3242,6 +3654,34 @@ export default function Game() {
     activeSpecialization = buildBase?.specialization
       ? developmentById[buildBase.specialization]
       : null,
+    escortUi =
+      ef?.mode === "escort"
+        ? (() => {
+            const pathIndex = Math.min(
+                k.current.caravanIndex,
+                ef.path.length - 1,
+              ),
+              from = n.current[ef.path[pathIndex]],
+              to = n.current[ef.path[Math.min(pathIndex + 1, ef.path.length - 1)]],
+              curve =
+                from?.id !== to?.id
+                  ? getDirectedRoadCurve(ef.roads, n.current, from.id, to.id)
+                  : null,
+              position = curve
+                ? pointOnRoad(curve, k.current.caravanProgress)
+                : { x: from?.x ?? 0.5, y: from?.y ?? 0.5 };
+            return {
+              health: Math.max(0, Math.ceil(k.current.caravanHealth)),
+              status: k.current.caravanStatus,
+              next:
+                ef.path?.[
+                  Math.min(k.current.caravanIndex + 1, ef.path.length - 1)
+                ],
+              protected: T.current < (k.current.caravanProtectedUntil || 0),
+              position,
+            };
+          })()
+        : null,
     totalCrowns = Object.values(_.crowns).reduce(
       (total, crowns) => total + countCrowns(crowns),
       0,
@@ -3258,28 +3698,29 @@ export default function Game() {
       e.id >= 6 ? setMissionIntro(e) : el(e.id);
     };
   return (0, r.jsxs)("main", {
-    className: `game-shell screen-${P}`,
+    className: `game-shell screen-${P} mission-${missionIntro?.id || selectedMission?.id || O}`,
     children: [
       (0, r.jsxs)("header", {
         className: "topbar",
         children: [
-          (0, r.jsxs)("button", {
-            className: "brand",
-            onClick: () => {
-              (A("home"), setMissionIntro(null), setSelectedMission(null));
-            },
-            children: [
-              (0, r.jsx)("span", { className: "crest", children: "♜" }),
-              (0, r.jsxs)("span", {
-                children: [
-                  (0, r.jsx)("small", { children: "CHRONIQUES" }),
-                  (0, r.jsx)("strong", {
-                    children: "Royaumes en Guerre",
-                  }),
-                ],
-              }),
-            ],
-          }),
+          "battle" !== P &&
+            (0, r.jsxs)("button", {
+              className: "brand",
+              onClick: () => {
+                (A("home"), setMissionIntro(null), setSelectedMission(null));
+              },
+              children: [
+                (0, r.jsx)("span", { className: "crest", children: "♜" }),
+                (0, r.jsxs)("span", {
+                  children: [
+                    (0, r.jsx)("small", { children: "CHRONIQUES" }),
+                    (0, r.jsx)("strong", {
+                      children: "Royaumes en Guerre",
+                    }),
+                  ],
+                }),
+              ],
+            }),
           (0, r.jsxs)("div", {
             className: "territory-score",
             children: [
@@ -3308,11 +3749,12 @@ export default function Game() {
                 "aria-pressed": H,
                 children: H ? "×" : "♪",
               }),
-              (0, r.jsx)("button", {
-                onClick: () => W(!0),
-                "aria-label": "Codex",
-                children: "?",
-              }),
+              "battle" !== P &&
+                (0, r.jsx)("button", {
+                  onClick: () => W(!0),
+                  "aria-label": "Codex",
+                  children: "?",
+                }),
               "battle" === P &&
                 (0, r.jsx)("button", {
                   onClick: em,
@@ -3516,7 +3958,7 @@ export default function Game() {
             (0, r.jsx)("div", {
               className: `mission-sheet terrain-${selectedMission.terrain}`,
               children: (0, r.jsxs)("div", {
-                className: "mission-sheet-card",
+                className: `mission-sheet-card ${selectedMission.mode === "escort" ? "mission-sheet-escort" : ""}`,
                 children: [
                   (0, r.jsx)("button", {
                     className: "sheet-close",
@@ -3533,12 +3975,23 @@ export default function Game() {
                       }),
                       (0, r.jsx)("small", { children: selectedMission.region }),
                       (0, r.jsx)("h2", { children: selectedMission.name }),
+                      selectedMission.mode === "escort" &&
+                        (0, r.jsx)("img", {
+                          className: "sheet-convoy",
+                          src: "/assets/mission-07/royal-convoy.png",
+                          alt: "Caravane royale",
+                        }),
                     ],
                   }),
                   (0, r.jsxs)("div", {
                     className: "sheet-orders",
                     children: [
                       (0, r.jsx)("h3", { children: selectedMission.objective }),
+                      selectedMission.mode === "escort" &&
+                        (0, r.jsx)("p", {
+                          className: "escort-brief",
+                          children: selectedMission.briefing,
+                        }),
                       (0, r.jsxs)("div", {
                         className: "crown-conditions",
                         children: getCrownDefinitions(selectedMission).map((e) =>
@@ -3577,13 +4030,19 @@ export default function Game() {
               children: (0, r.jsxs)("div", {
                 className: "mission-intro-panel",
                 children: [
-                  (0, r.jsxs)("div", {
-                    className: "intro-standard",
-                    children: [
-                      (0, r.jsx)("span", { children: "♜" }),
-                      (0, r.jsx)("i", {}),
-                    ],
-                  }),
+                  missionIntro.mode === "escort"
+                    ? (0, r.jsx)("img", {
+                        className: "intro-convoy",
+                        src: "/assets/mission-07/royal-convoy.png",
+                        alt: "Caravane royale prête au départ",
+                      })
+                    : (0, r.jsxs)("div", {
+                        className: "intro-standard",
+                        children: [
+                          (0, r.jsx)("span", { children: "♜" }),
+                          (0, r.jsx)("i", {}),
+                        ],
+                      }),
                   (0, r.jsx)("small", {
                     children: missionScenes[missionIntro.id]?.chapter,
                   }),
@@ -3644,9 +4103,53 @@ export default function Game() {
           "battle" === P &&
             (0, r.jsxs)(r.Fragment, {
               children: [
+                escortUi &&
+                  (0, r.jsxs)("div", {
+                    className: `escort-hud ${escortUi.status} ${escortUi.health <= 35 ? "critical" : ""}`,
+                    children: [
+                      (0, r.jsx)("img", {
+                        src: "/assets/mission-07/royal-convoy.png",
+                        alt: "",
+                      }),
+                      (0, r.jsxs)("span", {
+                        children: [
+                          (0, r.jsxs)("small", {
+                            children: [
+                              "CONVOI ROYAL · RELAIS ",
+                              Math.min(
+                                ef.path.length,
+                                k.current.caravanIndex + 1,
+                              ),
+                              "/",
+                              ef.path.length,
+                            ],
+                          }),
+                          (0, r.jsxs)("strong", {
+                            children: [escortUi.health, " %"],
+                          }),
+                          (0, r.jsx)("i", {
+                            children: (0, r.jsx)("em", {
+                              style: { width: `${escortUi.health}%` },
+                            }),
+                          }),
+                        ],
+                      }),
+                      (0, r.jsx)("b", {
+                        children: escortUi.protected
+                          ? "PROTÉGÉ"
+                          : escortUi.status === "moving"
+                            ? `VERS LE RELAIS ${escortUi.next}`
+                            : escortUi.status === "retreating"
+                              ? "REPLI EN COURS"
+                              : escortUi.status === "arrived"
+                                ? "SORTIE ATTEINTE"
+                                : `SÉCURISE LE RELAIS ${escortUi.next}`,
+                      }),
+                    ],
+                  }),
                 buildBase?.owner === "humans" &&
                   (0, r.jsxs)("div", {
-                    className: "development-panel",
+                    className: `development-panel ${escortUi ? (escortUi.position.x < 0.5 ? "dock-right" : "dock-left") : ""}`,
                     children: [
                       (0, r.jsxs)("header", {
                         children: [
@@ -3670,6 +4173,19 @@ export default function Game() {
                           }),
                         ],
                       }),
+                      escortUi && k.current.escortDirector?.pending?.[0] &&
+                        (0, r.jsxs)("div", {
+                          className: "development-threat",
+                          children: [
+                            (0, r.jsx)("b", { children: "ATTAQUE EN PAUSE" }),
+                            (0, r.jsxs)("span", {
+                              children: [
+                                "Cible : relais ",
+                                k.current.escortDirector.pending[0].targetId,
+                              ],
+                            }),
+                          ],
+                        }),
                       buildBase.construction
                         ? (0, r.jsxs)("div", {
                             className: "construction-progress",
@@ -3711,7 +4227,9 @@ export default function Game() {
                                     onClick: () =>
                                       startDevelopment(buildBase.id, option.id),
                                     children: [
-                                      (0, r.jsx)("i", { children: option.icon }),
+                                      (0, r.jsx)("i", {
+                                        className: `build-silhouette ${option.kind || buildBase.kind}`,
+                                      }),
                                       (0, r.jsxs)("span", {
                                         children: [
                                           (0, r.jsx)("strong", {
@@ -3733,17 +4251,18 @@ export default function Game() {
                             }),
                     ],
                   }),
-                (0, r.jsxs)("div", {
-                  className: "objective-chip",
-                  children: [
-                    (0, r.jsxs)("b", {
-                      children: [
-                        (0, r.jsx)("i", { children: "◆" }),
-                        z,
-                      ],
-                    }),
-                  ],
-                }),
+                !escortUi &&
+                  (0, r.jsxs)("div", {
+                    className: "objective-chip",
+                    children: [
+                      (0, r.jsxs)("b", {
+                        children: [
+                          (0, r.jsx)("i", { children: "◆" }),
+                          z,
+                        ],
+                      }),
+                    ],
+                  }),
                 (0, r.jsxs)("div", {
                   className: "dispatch-panel",
                   children: [
@@ -3766,7 +4285,7 @@ export default function Game() {
                         "aria-label": "Ravitaillement automatique",
                         "aria-pressed": $,
                         title: "Ravitaillement automatique",
-                        children: "↻",
+                        children: $ ? "AUTO 12" : "AUTO",
                       }),
                   ],
                 }),
@@ -3871,11 +4390,19 @@ export default function Game() {
                     "aria-modal": "true",
                     "aria-label": "Résultat de la bataille",
                     children: (0, r.jsxs)("div", {
-                      className: `result-panel ${E}`,
+                      className: `result-panel ${E} ${ef.mode}`,
                       children: [
                         (0, r.jsx)("div", {
                           className: "result-seal",
-                          children: "won" === E ? "♛" : "☠",
+                          children:
+                            "won" === E && ef.mode === "escort"
+                              ? (0, r.jsx)("img", {
+                                  src: "/assets/mission-07/royal-convoy.png",
+                                  alt: "Convoi arrivé",
+                                })
+                              : "won" === E
+                                ? "♛"
+                                : "☠",
                         }),
                         (0, r.jsx)("h2", {
                           children:
@@ -3883,6 +4410,15 @@ export default function Game() {
                               ? ef.name
                               : "La ligne a cédé",
                         }),
+                        ef.mode === "escort" && "won" === E &&
+                          (0, r.jsxs)("p", {
+                            className: "result-subtitle",
+                            children: [
+                              "La caravane a franchi la Route des Cendres avec ",
+                              Math.ceil(k.current.caravanHealth),
+                              " % d’intégrité.",
+                            ],
+                          }),
                         (0, r.jsx)("div", {
                           className: "result-crowns",
                           children: getCrownDefinitions(ef).map((crown) =>

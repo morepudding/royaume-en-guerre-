@@ -59,7 +59,11 @@ test("crown labels are scenario-specific", () => {
   );
   assert.match(
     getCrownDefinitions({ mode: "escort", par: 95 })[1].label,
-    /intégrité/,
+    /70 % d’intégrité/,
+  );
+  assert.match(
+    getCrownDefinitions({ mode: "escort", par: 95 })[2].label,
+    /1:30/,
   );
   assert.match(
     getCrownDefinitions({ mode: "betrayal", par: 125 })[2].label,
@@ -138,10 +142,28 @@ test("escort cannot softlock after the player is eliminated", () => {
   assert.equal(
     evaluateMissionOutcome({
       mission,
-      runtime: { caravanIndex: 2, caravanHealth: 40 },
+      runtime: {
+        caravanIndex: 2,
+        caravanHealth: 40,
+        caravanStatus: "arrived",
+        caravanArrivalReady: true,
+      },
       bases: [base(3, "humans")],
     }),
     "won",
+  );
+  assert.equal(
+    evaluateMissionOutcome({
+      mission,
+      runtime: {
+        caravanIndex: 2,
+        caravanHealth: 80,
+        caravanStatus: "arrived",
+        caravanArrivalReady: false,
+      },
+      bases: [base(3, "orcs")],
+    }),
+    null,
   );
   assert.equal(
     evaluateMissionOutcome({
@@ -315,16 +337,39 @@ test("defense crowns replace the impossible speed condition", () => {
   );
 });
 
-test("escort, evacuation, betrayal, and dawn crowns use their own state", () => {
-  assert.deepEqual(
-    evaluateMissionCrowns({
+test("escort integrity and speed crowns are independent", () => {
+  const integrityAttempt = evaluateMissionCrowns({
       mission: { mode: "escort", path: [0, 2, 3] },
-      runtime: { caravanHealth: 72, caravanRouteBrokenEver: false },
+      runtime: { caravanHealth: 72 },
       bases: [base(0, "humans"), base(2, "humans"), base(3, "humans")],
+      elapsed: 94,
       outcome: "won",
-    }),
-    { victory: true, secondary: true, mastery: true },
-  );
+    });
+  const speedAttempt = evaluateMissionCrowns({
+      mission: { mode: "escort", path: [0, 2, 3] },
+      runtime: { caravanHealth: 58 },
+      bases: [base(0, "humans"), base(2, "humans"), base(3, "humans")],
+      elapsed: 86,
+      outcome: "won",
+    });
+  assert.deepEqual(integrityAttempt, {
+    victory: true,
+    secondary: true,
+    mastery: false,
+  });
+  assert.deepEqual(speedAttempt, {
+    victory: true,
+    secondary: false,
+    mastery: true,
+  });
+  assert.deepEqual(mergeCrownSets(integrityAttempt, speedAttempt), {
+    victory: true,
+    secondary: true,
+    mastery: true,
+  });
+});
+
+test("escort, evacuation, betrayal, and dawn crowns use their own state", () => {
   assert.deepEqual(
     evaluateMissionCrowns({
       mission: { mode: "evacuation", par: 100, specialIds: [6] },

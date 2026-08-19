@@ -1163,541 +1163,6 @@ canvas {
   }
 }
 
-/* Premium battle surface: the battlefield stays dominant and every control remains thumb-readable. */
-.screen-battle {
-  width: 100%;
-  max-width: none;
-  gap: 4px;
-  padding-top: max(4px, env(safe-area-inset-top));
-  padding-bottom: max(4px, env(safe-area-inset-bottom));
-}
-.screen-battle .topbar {
-  flex: 0 0 40px;
-  height: 40px;
-  padding: 0 3px;
-}
-.screen-battle .crest {
-  width: 30px;
-  height: 30px;
-  border-radius: 10px;
-}
-.screen-battle .brand strong {
-  font-size: 15px;
-  line-height: 1;
-}
-.screen-battle .territory-score {
-  min-height: 34px;
-  gap: 13px;
-  padding: 6px 14px;
-  background: linear-gradient(180deg, #111b17e8, #050907e8);
-  border-color: #f2c45d26;
-  box-shadow: inset 0 1px #ffffff12, 0 7px 20px #0005;
-  backdrop-filter: blur(12px);
-}
-.screen-battle .territory-score span,
-.screen-battle .territory-score time {
-  font-size: 13px;
-}
-.screen-battle .territory-score time {
-  padding-left: 13px;
-}
-.screen-battle .controls {
-  gap: 5px;
-}
-.screen-battle .controls button {
-  width: 34px;
-  min-width: 34px;
-  height: 34px;
-  min-height: 34px;
-  border-color: #f2c45d2e;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #ffffff10, #00000018);
-  font-size: 14px;
-}
-.screen-battle .battle-card {
-  border-color: #d8b55f70;
-  border-radius: 17px;
-  box-shadow: 0 18px 50px #0008, inset 0 1px #ffffff24;
-}
-.screen-battle .objective-chip,
-.screen-battle .dispatch-panel,
-.screen-battle .command-power {
-  background: linear-gradient(145deg, #101a16e8, #030705ed);
-  border-color: #efd08145;
-  backdrop-filter: blur(13px) saturate(1.1);
-  box-shadow: 0 10px 30px #0008, inset 0 1px #ffffff13;
-}
-.screen-battle .objective-chip {
-  top: 8px;
-  left: 9px;
-  min-width: 0;
-  max-width: 34%;
-  min-height: 34px;
-  justify-content: center;
-  padding: 7px 12px;
-  border-radius: 12px;
-}
-.screen-battle .objective-chip b {
-  font-size: 12px;
-  line-height: 1.15;
-}
-.screen-battle .objective-chip b i {
-  font-size: 9px;
-}
-.screen-battle .dispatch-panel {
-  bottom: 8px;
-  left: 9px;
-  gap: 5px;
-  padding: 5px;
-  border-radius: 13px;
-}
-.screen-battle .dispatch-panel button {
-  min-width: 45px;
-  height: 38px;
-  padding: 0 11px;
-  border-radius: 9px;
-  color: #e6e3d8;
-  background: linear-gradient(180deg, #ffffff0d, #ffffff04);
-  border-color: #ffffff16;
-  font-size: 13px;
-}
-.screen-battle .dispatch-panel button.active {
-  color: #21180c;
-  background: linear-gradient(180deg, #ffdc7c, #e9ac43);
-  border-color: #ffe49a;
-  box-shadow: inset 0 1px #fff7c2, 0 4px 14px #e9ac4338;
-}
-.screen-battle .dispatch-panel .supply-toggle {
-  min-width: 38px;
-  width: 38px;
-  margin-left: 2px;
-  padding: 0;
-  font-size: 19px;
-}
-.screen-battle .command-power {
-  right: 9px;
-  bottom: 8px;
-  width: min(235px, 34%);
-  min-height: 49px;
-  padding: 6px;
-  border-radius: 13px;
-}
-.screen-battle .command-meter b {
-  font-size: 12px;
-}
-.screen-battle .command-meter i {
-  height: 5px;
-}
-.screen-battle .command-power > button {
-  flex-basis: 56px;
-  height: 37px;
-  border-radius: 9px;
-}
-.screen-battle .command-power > button strong {
-  font-size: 16px;
-}
-.screen-battle .command-power > button small {
-  font-size: 8px;
-}
-
-@media (orientation: landscape) and (max-height: 430px) {
-  .screen-battle .topbar {
-    flex-basis: 36px;
-    height: 36px;
-  }
-  .screen-battle .brand span:last-child {
-    display: none;
-  }
-  .screen-battle .crest,
-  .screen-battle .controls button {
-    width: 31px;
-    min-width: 31px;
-    height: 31px;
-    min-height: 31px;
-  }
-  .screen-battle .territory-score {
-    min-height: 31px;
-    padding: 5px 12px;
-  }
-  .screen-battle .objective-chip {
-    max-width: 38%;
-  }
-}
-
-/* Mobile interaction foundations. Controls keep a generous hit area without obscuring
-   the battlefield, while transient feedback sits below the floating HUD. */
-button:focus-visible {
-  outline: 3px solid #fff0a8;
-  outline-offset: 3px;
-  box-shadow: 0 0 0 2px #07100c, 0 0 0 5px #f2c45d66;
-}
-
-.screen-battle .topbar {
-  min-height: 44px;
-}
-
-.screen-battle .brand {
-  min-width: 44px;
-  min-height: 44px;
-  justify-content: flex-start;
-}
-
-.screen-battle .controls button {
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  min-height: 44px;
-}
-
-.screen-battle .dispatch-panel button {
-  min-width: 46px;
-  height: 44px;
-  min-height: 44px;
-}
-
-.screen-battle .dispatch-panel .supply-toggle {
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-}
-
-.screen-battle .command-power > button {
-  flex-basis: 58px;
-  height: 44px;
-  min-height: 44px;
-}
-
-.development-close,
-.sheet-close,
-.codex .close {
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  min-height: 44px;
-}
-
-.development-close {
-  flex-basis: 44px;
-  font-size: 20px;
-}
-
-.screen-battle .action-toast {
-  z-index: 9;
-  top: 60px;
-  right: auto;
-  left: 50%;
-  width: max-content;
-  max-width: min(76%, 520px);
-  padding: 9px 15px;
-  text-align: center;
-  line-height: 1.25;
-  transform: translateX(-50%);
-  box-shadow: 0 10px 30px #0009, inset 0 1px #ffffff12;
-  animation: 0.18s ease-out battle-toast-in;
-}
-
-@keyframes battle-toast-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -8px);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-}
-
-.screen-battle .development-panel {
-  z-index: 10;
-  width: min(760px, calc(100% - 28px));
-  max-height: calc(100% - 132px);
-  bottom: 66px;
-  padding: 12px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
-  -webkit-overflow-scrolling: touch;
-}
-
-.screen-battle .development-panel header {
-  min-height: 44px;
-  padding-bottom: 9px;
-}
-
-.screen-battle .development-panel header small {
-  font-size: 8px;
-}
-
-.screen-battle .development-panel header strong {
-  font-size: 14px;
-}
-
-.screen-battle .development-options {
-  gap: 8px;
-}
-
-.screen-battle .development-options > button {
-  grid-template-columns: 30px minmax(0, 1fr) auto;
-  gap: 8px;
-  min-height: 64px;
-  padding: 8px 10px;
-}
-
-.screen-battle .development-options > button > i {
-  font-size: 21px;
-}
-
-.screen-battle .development-options strong {
-  white-space: normal;
-  font-size: 11px;
-  line-height: 1.2;
-}
-
-.screen-battle .development-options small {
-  display: -webkit-box;
-  margin-top: 3px;
-  overflow: hidden;
-  color: #b5beb7;
-  font-size: 10px;
-  line-height: 1.3;
-  white-space: normal;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.screen-battle .development-options em {
-  padding: 5px 7px;
-  font-size: 10px;
-}
-
-.screen-battle .construction-progress,
-.screen-battle .development-complete {
-  min-height: 54px;
-}
-
-@media (orientation: landscape) and (max-height: 430px) {
-  .screen-battle .topbar {
-    height: 44px;
-    min-height: 44px;
-  }
-
-  .screen-battle .controls button {
-    width: 44px;
-    min-width: 44px;
-    height: 44px;
-    min-height: 44px;
-  }
-
-  .screen-battle .action-toast {
-    top: 55px;
-    max-width: min(74%, 480px);
-  }
-
-  .screen-battle .development-panel {
-    width: min(720px, calc(100% - 20px));
-    max-height: calc(100% - 116px);
-    bottom: 58px;
-    padding: 8px;
-  }
-
-  .screen-battle .development-panel header {
-    min-height: 40px;
-    padding-bottom: 5px;
-  }
-
-  .screen-battle .development-options > button {
-    min-height: 54px;
-    padding: 6px 8px;
-  }
-
-  .screen-battle .development-options small {
-    font-size: 10px;
-    -webkit-line-clamp: 1;
-  }
-}
-
-@media (orientation: landscape) and (max-height: 350px) {
-  .screen-battle .action-toast {
-    top: 52px;
-    max-width: 68%;
-    padding: 7px 12px;
-  }
-
-  .screen-battle .development-panel {
-    max-height: calc(100% - 108px);
-    bottom: 54px;
-  }
-
-  .screen-battle .development-panel header small {
-    font-size: 7px;
-  }
-
-  .screen-battle .development-panel header strong,
-  .screen-battle .development-options strong {
-    font-size: 10px;
-  }
-
-  .screen-battle .development-options > button {
-    min-height: 50px;
-  }
-}
-
-@media (orientation: landscape) and (max-width: 680px) {
-  .screen-battle .development-options.three {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (hover: none) and (pointer: coarse) {
-  .primary-button,
-  .secondary-button,
-  .campaign-back,
-  .home-icon-button,
-  .intro-actions button,
-  .result-actions button {
-    min-height: 44px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-  }
-}
-
-/* Battle layout v2: one uninterrupted map with a single floating HUD layer. */
-.screen-battle {
-  position: relative;
-  gap: 0;
-  padding: max(4px, env(safe-area-inset-top))
-    max(5px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom))
-    max(5px, env(safe-area-inset-left));
-}
-.screen-battle .topbar {
-  z-index: 8;
-  pointer-events: none;
-  width: auto;
-  height: 36px;
-  padding: 0;
-  position: absolute;
-  top: max(10px, env(safe-area-inset-top));
-  right: max(12px, env(safe-area-inset-right));
-  left: max(12px, env(safe-area-inset-left));
-}
-.screen-battle .topbar > * {
-  pointer-events: auto;
-}
-.screen-battle .brand span:last-child,
-.screen-battle .territory-score em {
-  display: none;
-}
-.screen-battle .crest {
-  width: 34px;
-  height: 34px;
-  background: linear-gradient(180deg, #15251ddf, #07100ce8);
-  border-color: #e9c26478;
-  box-shadow: 0 7px 20px #0007, inset 0 1px #ffffff16;
-  backdrop-filter: blur(12px);
-}
-.screen-battle .territory-score {
-  height: 34px;
-  min-height: 34px;
-  gap: 12px;
-  padding: 5px 13px;
-}
-.screen-battle .controls button {
-  width: 34px;
-  min-width: 34px;
-  height: 34px;
-  min-height: 34px;
-  background: linear-gradient(180deg, #15211ce8, #060b08eb);
-  box-shadow: 0 7px 20px #0007, inset 0 1px #ffffff12;
-  backdrop-filter: blur(12px);
-}
-.screen-battle .battle-card {
-  width: 100%;
-  flex: 1 1 100%;
-  border-radius: 18px;
-}
-.screen-battle .objective-chip {
-  z-index: 7;
-  top: 8px;
-  left: 50px;
-  max-width: 27%;
-  min-height: 34px;
-  padding: 7px 11px;
-}
-.screen-battle .dispatch-panel,
-.screen-battle .command-power {
-  z-index: 7;
-  bottom: 8px;
-}
-.screen-battle .dispatch-panel {
-  gap: 4px;
-  padding: 4px;
-}
-.screen-battle .dispatch-panel button {
-  min-width: 40px;
-  height: 34px;
-  padding: 0 9px;
-  font-size: 12px;
-}
-.screen-battle .dispatch-panel .supply-toggle {
-  width: 34px;
-  min-width: 34px;
-  height: 34px;
-  font-size: 18px;
-}
-.screen-battle .command-power {
-  width: min(205px, 29%);
-  min-height: 43px;
-  gap: 6px;
-  padding: 5px;
-}
-.screen-battle .command-meter b {
-  font-size: 11px;
-}
-.screen-battle .command-power > button {
-  flex-basis: 50px;
-  height: 33px;
-}
-.screen-battle .command-power > button strong {
-  font-size: 14px;
-}
-.screen-battle .command-power > button small {
-  font-size: 7px;
-}
-
-@media (orientation: landscape) and (max-height: 430px) {
-  .screen-battle .topbar {
-    height: 34px;
-    top: max(8px, env(safe-area-inset-top));
-  }
-  .screen-battle .crest,
-  .screen-battle .controls button,
-  .screen-battle .territory-score {
-    height: 32px;
-    min-height: 32px;
-  }
-  .screen-battle .crest,
-  .screen-battle .controls button {
-    width: 32px;
-    min-width: 32px;
-  }
-  .screen-battle .objective-chip {
-    top: 7px;
-    left: 46px;
-    max-width: 29%;
-    min-height: 32px;
-  }
-}
-
 /* Mobile readability pass: no essential label drops below a comfortable size. */
 @media (orientation: landscape) and (max-height: 570px) {
   .game-shell {
@@ -2735,99 +2200,541 @@ button:focus-visible {
   }
 }
 
-/* Keep the battle HUD authoritative after the legacy responsive layers above. */
-.screen-battle .objective-chip {
-  min-width: 0;
-  max-width: 34%;
-  min-height: 34px;
-  padding: 7px 12px;
+button:focus-visible {
+  outline: 3px solid #fff0a8;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 2px #07100c, 0 0 0 5px #f2c45d66;
 }
-.screen-battle .objective-chip b {
+.development-close,
+.sheet-close,
+.codex .close {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+}
+.development-close {
+  flex-basis: 44px;
+  font-size: 20px;
+}
+
+/* Authoritative battle HUD: one layer, fixed safe zones, no legacy overrides. */
+.screen-battle {
+  position: relative;
+  width: 100%;
+  max-width: none;
+  gap: 0;
+  padding: max(4px, env(safe-area-inset-top))
+    max(6px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom))
+    max(6px, env(safe-area-inset-left));
+}
+.screen-battle .topbar {
+  z-index: 12;
+  pointer-events: none;
+  position: absolute;
+  inset: max(6px, env(safe-area-inset-top))
+    max(7px, env(safe-area-inset-right)) auto
+    max(7px, env(safe-area-inset-left));
+  width: auto;
+  height: 44px;
+  min-height: 44px;
+  display: flex;
+  justify-content: flex-end;
+}
+.screen-battle .topbar > * {
+  pointer-events: auto;
+}
+.screen-battle .territory-score {
+  position: absolute;
+  left: 50%;
+  min-height: 44px;
+  transform: translateX(-50%);
+  color: #f7edd4;
+  background: #0b100ddd;
+  border: 1px solid #d9b96566;
+  border-radius: 12px;
   font-size: 12px;
+  box-shadow: 0 7px 20px #0008;
+}
+.screen-battle.mission-7 .territory-score {
+  display: none;
+}
+.screen-battle .controls {
+  gap: 6px;
 }
 .screen-battle .controls button {
   width: 44px;
   min-width: 44px;
   height: 44px;
   min-height: 44px;
+  color: #f4e7c6;
+  background: #0a0e0ce8;
+  border: 1px solid #d9b96570;
+  border-radius: 11px;
+  font-size: 17px;
+  box-shadow: 0 7px 20px #0008;
+}
+.screen-battle .battle-card {
+  width: 100%;
+  flex: 1 1 100%;
+  border-color: #9f7b3d8c;
+  border-radius: 13px;
+  box-shadow: inset 0 1px #ffffff16;
+}
+.screen-battle .objective-chip {
+  z-index: 8;
+  top: 7px;
+  left: 7px;
+  min-width: 0;
+  max-width: min(42%, 360px);
+  min-height: 44px;
+  padding: 8px 13px;
+  background: #090e0be8;
+  border-color: #d9b96566;
+  border-radius: 12px;
+  box-shadow: 0 8px 22px #0008;
+}
+.screen-battle .objective-chip b,
+.screen-battle .objective-chip b i {
+  font-size: 12px;
+}
+.screen-battle .escort-hud {
+  z-index: 9;
+  pointer-events: none;
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: min(430px, calc(100% - 220px));
+  min-height: 54px;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: 78px minmax(110px, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 10px 4px 3px;
+  color: #fff2cf;
+  background: #0a0d0be8;
+  border: 1px solid #d9b96588;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px #0009;
+}
+.screen-battle .escort-hud.critical {
+  border-color: #ef6c58cc;
+}
+.escort-hud img {
+  width: 78px;
+  height: 48px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 3px #000b);
+}
+.escort-hud span {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 8px;
+}
+.escort-hud small {
+  overflow: hidden;
+  color: #c9b98f;
+  font-size: 12px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.escort-hud strong {
+  color: #f5d476;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.escort-hud.critical strong {
+  color: #ff806c;
+}
+.escort-hud i {
+  grid-column: 1 / -1;
+  height: 6px;
+  overflow: hidden;
+  background: #ffffff14;
+  border-radius: 6px;
+}
+.escort-hud i em {
+  height: 100%;
+  display: block;
+  background: #e2b84f;
+  border-radius: inherit;
+  transition: width 0.2s linear;
+}
+.escort-hud.critical i em {
+  background: #ec674f;
+}
+.escort-hud > b {
+  max-width: 126px;
+  color: #fff5d8;
+  font-size: 12px;
+  line-height: 1.12;
+  text-align: right;
+}
+.screen-battle .dispatch-panel,
+.screen-battle .command-power {
+  z-index: 9;
+  bottom: 7px;
+  color: #f6eacb;
+  background: #090d0be8;
+  border-color: #d9b96566;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px #0009;
 }
 .screen-battle .dispatch-panel {
-  bottom: 8px;
+  left: 7px;
   gap: 5px;
-  padding: 5px;
+  padding: 4px;
 }
 .screen-battle .dispatch-panel button {
-  min-width: 45px;
+  min-width: 46px;
   height: 44px;
   min-height: 44px;
-  padding: 0 11px;
+  padding: 0 10px;
+  color: #e6dfce;
+  background: #ffffff09;
+  border-color: #ffffff1d;
+  border-radius: 9px;
   font-size: 13px;
 }
+.screen-battle .dispatch-panel button.active {
+  color: #251a0d;
+  background: #edbf59;
+  border-color: #ffe49a;
+  box-shadow: inset 0 1px #fff4bf;
+}
 .screen-battle .dispatch-panel .supply-toggle {
-  min-width: 44px;
-  width: 44px;
-  height: 44px;
-  min-height: 44px;
-  padding: 0;
-  font-size: 19px;
+  min-width: 62px;
+  width: auto;
+  margin-left: 1px;
+  font-size: 12px;
 }
 .screen-battle .command-power {
-  right: 9px;
-  bottom: 8px;
-  width: min(235px, 34%);
+  right: 7px;
+  width: min(235px, 36%);
+  min-height: 52px;
+  gap: 7px;
+  padding: 4px;
+}
+.screen-battle .command-meter b {
+  font-size: 12px;
+}
+.screen-battle .command-meter i {
+  height: 5px;
 }
 .screen-battle .command-power > button {
-  flex-basis: 58px;
+  flex-basis: 64px;
   height: 44px;
   min-height: 44px;
+  border-radius: 9px;
 }
-
+.screen-battle .command-power > button strong {
+  font-size: 17px;
+}
+.screen-battle .command-power > button small {
+  font-size: 12px;
+}
+.screen-battle .action-toast {
+  z-index: 11;
+  top: 66px;
+  left: 50%;
+  right: auto;
+  width: max-content;
+  max-width: min(80%, 520px);
+  min-height: 34px;
+  transform: translateX(-50%);
+  display: grid;
+  place-items: center;
+  padding: 7px 13px;
+  color: #fff1cc;
+  background: #0a0c0aec;
+  border-color: #d9b96588;
+  border-radius: 10px;
+  font-size: 12px;
+  text-align: center;
+}
+.screen-battle .development-panel {
+  z-index: 14;
+  width: min(650px, calc(100% - 18px));
+  max-height: calc(100% - 128px);
+  bottom: 60px;
+  padding: 8px;
+  background: #090d0bf5;
+  border-color: #e4c36f99;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px #000b;
+}
+.screen-battle .development-panel.dock-left,
+.screen-battle .development-panel.dock-right {
+  top: 60px;
+  bottom: auto;
+  width: min(270px, calc(100% - 18px));
+  max-height: calc(100% - 122px);
+  left: 7px;
+  transform: none;
+}
+.screen-battle .development-panel.dock-right {
+  right: 7px;
+  left: auto;
+}
+.screen-battle .development-panel.dock-left .development-options.three,
+.screen-battle .development-panel.dock-right .development-options.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.screen-battle .development-panel.dock-left .development-options > button,
+.screen-battle .development-panel.dock-right .development-options > button {
+  grid-template-columns: 30px minmax(0, 1fr);
+  min-height: 62px;
+  gap: 4px;
+  padding: 4px;
+}
+.screen-battle .development-panel.dock-left .development-options em,
+.screen-battle .development-panel.dock-right .development-options em {
+  grid-column: 2;
+}
+.screen-battle .development-panel.dock-left .build-silhouette,
+.screen-battle .development-panel.dock-right .build-silhouette {
+  width: 30px;
+  height: 42px;
+  grid-row: 1 / span 2;
+}
+.development-threat {
+  min-height: 34px;
+  margin: 0 0 6px;
+  padding: 5px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #ffd0c7;
+  background: #7e241e4d;
+  border: 1px solid #ee6c5988;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.development-threat b,
+.development-threat span {
+  font-size: 12px;
+}
+.screen-battle .development-panel header {
+  min-height: 44px;
+  padding: 0 2px 6px;
+}
+.screen-battle .development-panel header small,
+.screen-battle .development-panel header strong,
+.screen-battle .development-options strong,
+.screen-battle .development-options small,
+.screen-battle .development-options em,
+.screen-battle .construction-progress b,
+.screen-battle .construction-progress span,
+.screen-battle .development-complete b,
+.screen-battle .development-complete span {
+  font-size: 12px;
+}
+.screen-battle .development-options {
+  gap: 6px;
+}
+.screen-battle .development-options > button {
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  min-height: 58px;
+  padding: 5px 7px;
+  background: #ffffff08;
+  border-color: #ffffff18;
+}
+.build-silhouette {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  display: block;
+  color: #e8c260;
+  background: #e8c2601a;
+  border: 1px solid #e8c26052;
+  border-radius: 8px;
+}
+.build-silhouette::before,
+.build-silhouette::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: currentColor;
+}
+.build-silhouette.village::before {
+  bottom: 7px;
+  width: 25px;
+  height: 18px;
+  clip-path: polygon(0 35%, 50% 0, 100% 35%, 100% 100%, 0 100%);
+}
+.build-silhouette.village::after {
+  right: 4px;
+  bottom: 7px;
+  left: auto;
+  width: 8px;
+  height: 13px;
+  transform: none;
+}
+.build-silhouette.fortress::before {
+  bottom: 7px;
+  width: 29px;
+  height: 25px;
+  clip-path: polygon(0 0, 18% 0, 18% 20%, 36% 20%, 36% 0, 64% 0, 64% 20%, 82% 20%, 82% 0, 100% 0, 100% 100%, 0 100%);
+}
+.build-silhouette.fortress::after {
+  bottom: 7px;
+  width: 7px;
+  height: 12px;
+  background: #18150e;
+  border-radius: 6px 6px 0 0;
+}
+.build-silhouette.tower::before {
+  bottom: 6px;
+  width: 17px;
+  height: 29px;
+  clip-path: polygon(0 12%, 20% 12%, 20% 0, 40% 0, 40% 12%, 60% 12%, 60% 0, 80% 0, 80% 12%, 100% 12%, 100% 100%, 0 100%);
+}
+.build-silhouette.tower::after {
+  top: 4px;
+  width: 2px;
+  height: 11px;
+  box-shadow: 7px 3px 0 -1px currentColor;
+}
+.mission-sheet-escort .sheet-identity {
+  overflow: hidden;
+}
+.sheet-convoy {
+  position: absolute;
+  right: 2%;
+  bottom: 1%;
+  width: min(66%, 440px);
+  max-height: 74%;
+  object-fit: contain;
+  object-position: right bottom;
+  filter: drop-shadow(0 14px 12px #000b);
+  opacity: 0.92;
+}
+.mission-sheet-escort .sheet-identity small,
+.mission-sheet-escort .sheet-identity h2,
+.mission-sheet-escort .sheet-number {
+  position: relative;
+  z-index: 2;
+}
+.escort-brief {
+  max-width: 47ch;
+  color: #b9b19d !important;
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+}
+.mission-sheet-escort .crown-conditions span,
+.mission-sheet-escort .sheet-orders h3,
+.mission-sheet-escort .sheet-orders .primary-button,
+.mission-7 .mission-intro-panel > small,
+.mission-7 .intro-scene,
+.mission-7 .intro-order,
+.mission-7 .intro-order span,
+.mission-7 .intro-order b,
+.mission-7 .intro-actions button {
+  font-size: 12px;
+}
+.intro-convoy {
+  width: min(300px, 45vw);
+  max-height: 118px;
+  margin: -8px auto -2px;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 9px #000b);
+}
+.result-panel.escort .result-seal {
+  width: 104px;
+  height: 54px;
+  margin-top: -38px;
+  background: #181209;
+  border: 1px solid #f2c45d66;
+  border-radius: 14px;
+}
+.result-panel.escort .result-seal img {
+  width: 100px;
+  height: 62px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 5px #000c);
+}
 @media (orientation: landscape) and (max-height: 430px) {
-  .screen-battle .topbar {
-    flex-basis: 44px;
-    height: 44px;
-    min-height: 44px;
+  .screen-battle .escort-hud {
+    top: 5px;
+    width: min(410px, calc(100% - 214px));
+    min-height: 50px;
   }
-  .screen-battle .brand span:last-child {
-    display: none;
+  .escort-hud img {
+    width: 70px;
+    height: 43px;
   }
-  .screen-battle .objective-chip {
-    max-width: 38%;
-  }
-  .screen-battle .controls button {
-    width: 44px;
-    min-width: 44px;
-    height: 44px;
-    min-height: 44px;
+  .screen-battle .escort-hud {
+    grid-template-columns: 70px minmax(100px, 1fr) auto;
   }
   .screen-battle .development-panel {
-    width: min(720px, calc(100% - 20px));
-    max-height: calc(100% - 116px);
     bottom: 58px;
-    padding: 8px;
-  }
-  .screen-battle .development-panel header {
-    min-height: 40px;
-    padding-bottom: 5px;
+    max-height: calc(100% - 120px);
   }
   .screen-battle .development-options > button {
     min-height: 54px;
-    padding: 6px 8px;
+  }
+  .intro-convoy {
+    max-height: 82px;
   }
 }
-
-@media (orientation: landscape) and (max-height: 350px) {
-  .screen-battle .development-panel {
-    max-height: calc(100% - 108px);
-    bottom: 54px;
+@media (orientation: landscape) and (max-width: 700px) {
+  .screen-battle .escort-hud {
+    left: 7px;
+    width: calc(100% - 116px);
+    transform: none;
+  }
+  .escort-hud > b {
+    max-width: 105px;
+  }
+  .screen-battle .command-power {
+    width: 215px;
+  }
+  .screen-battle .development-options.three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .screen-battle .development-options > button {
-    min-height: 50px;
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+  .screen-battle .development-options em {
+    grid-column: 2;
+  }
+  .build-silhouette {
+    width: 36px;
+    height: 42px;
+    grid-row: 1 / span 2;
   }
 }
-
-@media (orientation: landscape) and (max-width: 680px) {
-  .screen-battle .development-options.three {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .escort-hud i em,
+  .command-power,
+  .command-meter em,
+  .action-toast,
+  .result-panel {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@media (hover: none) and (pointer: coarse) {
+  .primary-button,
+  .secondary-button,
+  .campaign-back,
+  .home-icon-button,
+  .intro-actions button,
+  .result-actions button {
+    min-height: 44px;
   }
 }
