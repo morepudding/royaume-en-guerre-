@@ -1,10 +1,22 @@
 {
+  "id": "/",
   "name": "Royaumes en Guerre",
   "short_name": "Royaumes",
+  "description": "Conquérez les terres du royaume dans une campagne stratégique en quinze missions.",
+  "lang": "fr",
   "start_url": "/",
+  "scope": "/",
   "display": "fullscreen",
   "orientation": "landscape",
   "background_color": "#07100c",
   "theme_color": "#07100c",
-  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "categories": ["games", "strategy"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
 }

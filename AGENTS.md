@@ -18,7 +18,9 @@ This repository is the source of truth for **Royaume en Guerre**.
 - At full command, the player targets a human base: directly connected human bases send 25% and the target gains +65% production for 8 seconds
 - From mission 2 onward, ordinary villages and towers start as bonus-free level-I cities
 - Construction unlocks progressively: village in mission 2, fortress in mission 3, tower in mission 4, all three in mission 5
-- From mission 6 onward, each completed building can take one of two branch-specific specializations for 16 soldiers
+- From mission 6 onward, each completed building can take one of two branch-specific specializations for 12 soldiers
+- Campaign crowns are stored as three independent booleans (`victory`, `secondary`, `mastery`) with automatic migration from legacy numeric totals
+- Scenario victory/defeat and crown rules live in `app/game/mission-rules.mjs` and are covered by Node tests
 - Construction takes time, slows production while active, is cancelled by capture and is also used strategically by the Orc AI
 - Orc AI telegraphs planned assaults, coordinated attacks, reinforcements and neutral expansion before executing them
 - Product shell: animated title screen, continue action and progression summary
@@ -31,6 +33,8 @@ This repository is the source of truth for **Royaume en Guerre**.
 
 - `app/page.js`: mission data and complete game loop
 - `app/immersion-audio.js`: procedural music and action sound effects
+- `app/game/mission-rules.mjs`: pure mission outcome, crown and campaign-progress rules
+- `tests/mission-rules.test.mjs`: regression tests for scenario endings and crowns
 - `app/globals.css`: all game and responsive styles
 - `app/layout.tsx`: fonts, metadata and mobile viewport
 - `public/sw.js`: service worker

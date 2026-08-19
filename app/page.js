@@ -3,6 +3,14 @@
 import * as React from "react";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 import { createImmersionAudio } from "./immersion-audio";
+import {
+  countCrowns,
+  evaluateMissionCrowns,
+  evaluateMissionOutcome,
+  getCrownDefinitions,
+  mergeCrownSets,
+  normalizeCrownProgress,
+} from "./game/mission-rules.mjs";
 
 const r = { Fragment, jsx, jsxs };
 const t = React;
@@ -332,7 +340,7 @@ let n = (e, r, t, n, s, a, l, i) => ({
       region: "Fleuve Noir",
       briefing:
         "Sacrifie quarante soldats au chantier pour rétablir le passage avant que la rive ne tombe.",
-      objective: "Livre 40 soldats au chantier du pont",
+      objective: "Répare le pont puis élimine la Horde",
       par: 115,
       terrain: "river",
       mode: "bridge",
@@ -524,11 +532,17 @@ let n = (e, r, t, n, s, a, l, i) => ({
     orcScore: 0,
     caravanIndex: 0,
     caravanProgress: 0,
+    caravanHealth: 100,
+    caravanRouteBrokenEver: !1,
     betrayalDone: !1,
+    betrayedBaseId: null,
     dawnDone: !1,
+    dawnReinforcement: null,
     nextWave: 7,
+    waveCount: 0,
     lostHumanBase: !1,
     sealsOpened: !1,
+    bossOpened: !1,
   }),
   u = (e) =>
     e.bases.map((r) => ({
@@ -609,7 +623,7 @@ let n = (e, r, t, n, s, a, l, i) => ({
       chapter: "ACTE III · LE FLEUVE NOIR",
       scene:
         "Le pont s’est effondré dans le courant. Sur l’autre rive, la Horde se rassemble pendant que tes bâtisseurs attendent des renforts.",
-      rule: "Chantier · Sacrifie 40 soldats pour rouvrir la route",
+      rule: "Chantier · Livre 40 soldats, rouvre la route puis élimine la Horde",
     },
     12: {
       chapter: "ACTE IV · LE SERMENT BRISÉ",
@@ -673,17 +687,17 @@ const developmentChoices = {
       icon: "✦",
       label: "Grenier royal",
       description: "+27 % production",
-      cost: 16,
-      duration: 7,
+      cost: 12,
+      duration: 6,
       stats: { production: 2.1 },
     },
     {
       id: "walled-borough",
       icon: "◆",
       label: "Bourg fortifié",
-      description: "+18 % défense",
-      cost: 16,
-      duration: 7,
+      description: "+18 % défense · production légèrement réduite",
+      cost: 12,
+      duration: 6,
       stats: { production: 1.55, defense: 1.18 },
     },
   ],
@@ -692,18 +706,18 @@ const developmentChoices = {
       id: "citadel",
       icon: "♜",
       label: "Citadelle",
-      description: "+27 % défense",
-      cost: 16,
-      duration: 7,
+      description: "+27 % défense · production réduite",
+      cost: 12,
+      duration: 6,
       stats: { production: 0.8, defense: 1.72 },
     },
     {
       id: "bastide",
       icon: "♛",
       label: "Bastide",
-      description: "Défense et production",
-      cost: 16,
-      duration: 7,
+      description: "+39 % production · +5 % défense",
+      cost: 12,
+      duration: 6,
       stats: { production: 1.25, defense: 1.42 },
     },
   ],
@@ -713,17 +727,17 @@ const developmentChoices = {
       icon: "➶",
       label: "Relais royal",
       description: "+30 % vitesse",
-      cost: 16,
-      duration: 7,
+      cost: 12,
+      duration: 6,
       stats: { speed: 1.95 },
     },
     {
       id: "watchtower",
       icon: "◈",
       label: "Tour de garde",
-      description: "Vitesse et défense",
-      cost: 16,
-      duration: 7,
+      description: "+25 % défense · production améliorée",
+      cost: 12,
+      duration: 6,
       stats: { production: 1.2, defense: 1.25, speed: 1.55 },
     },
   ],
@@ -759,6 +773,56 @@ const getBaseStats = (base) => {
     : baseStats;
 };
 
+const getMissionObjectivePriority = (mission, base, runtime) => {
+  if (!mission || !base) return 0;
+  switch (mission.mode) {
+    case "defense":
+      return base.id === (mission.target || 0) ? 42 : 0;
+    case "escort": {
+      let pathIndex = mission.path?.indexOf(base.id) ?? -1;
+      return pathIndex >= 0
+        ? 18 + 6 * Math.max(0, pathIndex - (runtime.caravanIndex || 0))
+        : 0;
+    }
+    case "evacuation":
+      return base.special === "exit" ? 44 : 0;
+    case "seals":
+      return mission.specialIds?.includes(base.id) ? 34 : 0;
+    case "boss":
+      return mission.specialIds?.includes(base.id)
+        ? 28
+        : base.id === mission.target
+          ? 20
+          : 0;
+    case "bridge":
+      return base.special === "worksite" ? 38 : 0;
+    case "relic":
+      return base.special === "relic" ? 46 : 0;
+    case "dawn":
+      return mission.specialIds?.includes(base.id) ? 34 : 0;
+    default:
+      return base.special ? 12 : 0;
+  }
+};
+
+const addReinforcements = (bases, owner, amount, preferredId) => {
+  let remaining = Math.max(0, amount),
+    targets = bases
+      .filter((base) => base.owner === owner && !base.invulnerable)
+      .sort(
+        (left, right) =>
+          Number(right.id === preferredId) - Number(left.id === preferredId) ||
+          left.units - right.units,
+      );
+  for (let base of targets) {
+    let added = Math.min(remaining, Math.max(0, 99 - base.units));
+    base.units += added;
+    remaining -= added;
+    if (remaining <= 0) break;
+  }
+  return amount - remaining;
+};
+
 const buildingNames = {
   city: "Ville niveau I",
   village: "Village",
@@ -778,8 +842,7 @@ const getBattlefieldLayout = (width, height) => {
   };
 };
 
-const publicAssetBase =
-  "https://raw.githubusercontent.com/morepudding/royaume-en-guerre-/main/public";
+const publicAssetBase = "";
 
 const buildingAssetSources = {
   humans: {
@@ -1049,6 +1112,7 @@ export default function Game() {
     battleFx = (0, t.useRef)({ shake: 0, flash: 0, color: "242,196,93" }),
     buildingArt = (0, t.useRef)({ humans: {}, neutral: {}, orcs: {} }),
     missionMapArt = (0, t.useRef)({}),
+    suspensions = (0, t.useRef)(new Set()),
     [P, A] = (0, t.useState)("home"),
     [E, I] = (0, t.useState)("playing"),
     [O, q] = (0, t.useState)(1),
@@ -1076,9 +1140,12 @@ export default function Game() {
         let e = localStorage.getItem(i);
         if (e) {
           let r = JSON.parse(e);
+          let unlocked = Number(r.unlocked);
           ee({
-            unlocked: Math.max(1, Math.min(15, r.unlocked || 1)),
-            crowns: r.crowns || {},
+            unlocked: Number.isFinite(unlocked)
+              ? Math.max(1, Math.min(15, Math.floor(unlocked)))
+              : 1,
+            crowns: normalizeCrownProgress(r.crowns),
           });
         }
       } catch {}
@@ -1111,18 +1178,53 @@ export default function Game() {
     (0, t.useEffect)(
       () => () => {
         audioEngine.current?.stop();
+        M.current?.close?.().catch?.(() => void 0);
       },
       [],
     ));
+  (0, t.useEffect)(() => {
+    V ? suspensions.current.add("codex") : suspensions.current.delete("codex");
+    if (P !== "battle" || E !== "playing" || suspensions.current.size)
+      audioEngine.current?.pause?.();
+    else {
+      y.current = performance.now();
+      audioEngine.current?.resumeBattle?.();
+    }
+  }, [E, P, V]);
+  (0, t.useEffect)(() => {
+    let portrait = window.matchMedia("(orientation: portrait)"),
+      syncEnvironment = () => {
+        document.hidden
+          ? suspensions.current.add("hidden")
+          : suspensions.current.delete("hidden");
+        portrait.matches
+          ? suspensions.current.add("portrait")
+          : suspensions.current.delete("portrait");
+        if (suspensions.current.size) audioEngine.current?.pause?.();
+        else if (p.current === "battle" && g.current === "playing") {
+          y.current = performance.now();
+          audioEngine.current?.resumeBattle?.();
+        }
+      };
+    document.addEventListener("visibilitychange", syncEnvironment);
+    portrait.addEventListener?.("change", syncEnvironment);
+    syncEnvironment();
+    return () => {
+      document.removeEventListener("visibilitychange", syncEnvironment);
+      portrait.removeEventListener?.("change", syncEnvironment);
+    };
+  }, []);
   (0, t.useEffect)(() => {
     let cancelled = !1;
     for (let [faction, sources] of Object.entries(buildingAssetSources)) {
       for (let [kind, source] of Object.entries(sources)) {
         let image = new Image();
-        image.crossOrigin = "anonymous";
         image.decoding = "async";
         image.onload = () => {
           if (!cancelled) buildingArt.current[faction][kind] = image;
+        };
+        image.onerror = () => {
+          if (!cancelled) delete buildingArt.current[faction][kind];
         };
         image.src = source;
       }
@@ -1133,19 +1235,28 @@ export default function Game() {
   }, []);
   (0, t.useEffect)(() => {
     let cancelled = !1;
-    for (let [id, source] of Object.entries(missionMapSources)) {
-      let image = new Image();
-      image.crossOrigin = "anonymous";
+    let requestedIds = new Set(
+      [O, O + 1, selectedMission?.id, missionIntro?.id].filter(
+        (id) => id >= 1 && id <= 15,
+      ),
+    );
+    for (let id of requestedIds) {
+      if (missionMapArt.current[id]) continue;
+      let source = missionMapSources[id],
+        image = new Image();
       image.decoding = "async";
       image.onload = () => {
         if (!cancelled) missionMapArt.current[id] = image;
+      };
+      image.onerror = () => {
+        if (!cancelled) delete missionMapArt.current[id];
       };
       image.src = source;
     }
     return () => {
       cancelled = !0;
     };
-  }, []);
+  }, [O, selectedMission?.id, missionIntro?.id]);
   let er = (0, t.useCallback)((e, r = 0.07, t = 0.035) => {
       if (!N.current)
         try {
@@ -1211,7 +1322,7 @@ export default function Game() {
         case "defense":
           return `Porte : ${Math.max(0, (e.duration || 75) - t)} s`;
         case "escort":
-          return `Convoi : ${Math.min(e.path?.length || 1, r.caravanIndex + 1)}/${e.path?.length || 1}`;
+          return `Convoi : ${Math.min(e.path?.length || 1, r.caravanIndex + 1)}/${e.path?.length || 1} · ${Math.ceil(r.caravanHealth)} %`;
         case "seals":
           return `Sceaux : ${e.specialIds?.filter((e) => n.current[e]?.owner === "humans").length || 0}/3`;
         case "evacuation":
@@ -1251,7 +1362,14 @@ export default function Game() {
           t = k.current,
           a = Math.floor(T.current),
           l = "won" === e,
-          o = l ? 1 + +(T.current <= r.par) + +!t.lostHumanBase : 0,
+          crownSet = evaluateMissionCrowns({
+            mission: r,
+            runtime: t,
+            bases: n.current,
+            elapsed: T.current,
+            outcome: e,
+          }),
+          o = countCrowns(crownSet),
           u = n.current.filter((e) => "humans" === e.owner),
           c = Math.floor(u.reduce((e, r) => e + r.units, 0));
         ((g.current = e),
@@ -1260,7 +1378,8 @@ export default function Game() {
             outcome: e,
             time: a,
             par: r.par,
-            crowns: o,
+            crowns: crownSet,
+            crownCount: o,
             bases: u.length,
             troops: c,
             keptEveryBase: !t.lostHumanBase,
@@ -1277,10 +1396,13 @@ export default function Game() {
               unlocked: Math.max(e.unlocked, Math.min(15, r.id + 1)),
               crowns: {
                 ...e.crowns,
-                [r.id]: Math.max(e.crowns[r.id] || 0, o),
+                [r.id]: mergeCrownSets(e.crowns[r.id], crownSet),
               },
             };
-            return (localStorage.setItem(i, JSON.stringify(t)), t);
+            try {
+              localStorage.setItem(i, JSON.stringify(t));
+            } catch {}
+            return t;
           });
       },
       [er, immersiveSound],
@@ -1339,6 +1461,7 @@ export default function Game() {
           screen.orientation?.lock?.("landscape").catch(() => void 0),
           er(440, 0.09, 0.025),
           (audioEngine.current ??= createImmersionAudio()),
+          audioEngine.current.setMuted(N.current),
           audioEngine.current.startBattle(r.terrain, r.mode));
       },
       [er],
@@ -1388,6 +1511,7 @@ export default function Game() {
           }),
           "humans" === owner &&
             (setBuildMenu(null),
+            h.current.id >= 2 && h.current.id <= 4 && X(1),
             immersiveSound("repair"),
             er(610, 0.1, 0.035),
             navigator.vibrate?.(24),
@@ -1437,7 +1561,13 @@ export default function Game() {
             units: o,
             progress: 0,
             previousProgress: 0,
-            speed: getBaseStats(i).speed,
+            speed:
+              getBaseStats(i).speed *
+              ("boss" === h.current.mode &&
+              "orcs" === t &&
+              "orcs" === n.current[h.current.specialIds?.[0]]?.owner
+                ? 1.25
+                : 1),
           }),
           f.current.push({
             id: C.current++,
@@ -1521,6 +1651,7 @@ export default function Game() {
     let t = r.getContext("2d");
     if (!t) return;
     let s = 0,
+      pauseTimer = 0,
       i = () => {
         let e = r.getBoundingClientRect(),
           n = Math.min(devicePixelRatio || 1, 2);
@@ -1531,6 +1662,7 @@ export default function Game() {
     i();
     let o = new ResizeObserver(i);
     o.observe(r);
+    if (P !== "battle") return () => o.disconnect();
     let u = (e) => {
       let i = r.getBoundingClientRect(),
         o = i.width,
@@ -1542,13 +1674,24 @@ export default function Game() {
       y.current = e;
       let L = h.current,
         P = k.current;
+      if ("playing" !== g.current || suspensions.current.size) {
+        r.style.transform = "translate3d(0,0,0)";
+        pauseTimer = window.setTimeout(() => {
+          s = requestAnimationFrame(u);
+        }, 250);
+        return;
+      }
       let activeFx = battleFx.current;
       activeFx.shake = Math.max(0, activeFx.shake - 22 * N);
       activeFx.flash = Math.max(0, activeFx.flash - 1.9 * N);
       r.style.transform = activeFx.shake
         ? `translate3d(${(Math.random() - 0.5) * activeFx.shake}px, ${(Math.random() - 0.5) * activeFx.shake}px, 0)`
         : "translate3d(0,0,0)";
-      if ("battle" === p.current && "playing" === g.current) {
+      if (
+        "battle" === p.current &&
+        "playing" === g.current &&
+        0 === suspensions.current.size
+      ) {
         ((T.current += N),
           (S.current += N),
           (R.current += N));
@@ -1597,10 +1740,11 @@ export default function Game() {
               e.units +
                 N *
                   getBaseStats(e).production *
-                  (e.construction ? 0.35 : 1) *
+                  (e.construction ? 0.55 : 1) *
                   ("orcs" === e.owner &&
                   "boss" === L.mode &&
-                  "boss" === e.special
+                  "boss" === e.special &&
+                  "orcs" === n.current[L.specialIds?.[2]]?.owner
                     ? 1.35
                     : 1) *
                   ("humans" === e.owner &&
@@ -1612,20 +1756,39 @@ export default function Game() {
         if ("relic" === L.mode) {
           let e = n.current[L.specialIds?.[0] || 4];
           ("humans" === e.owner && (P.humanScore += N),
-            "orcs" === e.owner && (P.orcScore += N),
-            P.humanScore >= 100 && ea("won"),
-            P.orcScore >= 100 && ea("lost"));
+            "orcs" === e.owner && (P.orcScore += N));
         }
         if ("escort" === L.mode && L.path) {
-          let e = L.path[P.caravanIndex + 1];
-          (void 0 !== e &&
-            "humans" === n.current[e].owner &&
-            ((P.caravanProgress += 0.16 * N),
-            P.caravanProgress >= 1 &&
-              (P.caravanIndex++,
-              (P.caravanProgress = 0),
-              et("Le convoi atteint un relais"))),
-            P.caravanIndex >= L.path.length - 1 && ea("won"));
+          let securedRoute = L.path
+              .slice(0, P.caravanIndex + 1)
+              .every((baseId) => "humans" === n.current[baseId]?.owner),
+            nextRelay = L.path[P.caravanIndex + 1];
+          if (!securedRoute) {
+            P.caravanProgress = Math.max(0, P.caravanProgress - 0.22 * N);
+            P.caravanHealth = Math.max(0, P.caravanHealth - 9 * N);
+            P.caravanRouteBrokenEver = !0;
+          } else {
+            P.caravanHealth = Math.min(100, P.caravanHealth + 1.4 * N);
+            void 0 !== nextRelay &&
+              "humans" === n.current[nextRelay]?.owner &&
+              ((P.caravanProgress += 0.16 * N),
+              P.caravanProgress >= 1 &&
+                (P.caravanIndex++,
+                (P.caravanProgress = 0),
+                et("Le convoi atteint un relais")));
+          }
+        }
+        if (
+          "boss" === L.mode &&
+          !P.bossOpened &&
+          L.specialIds?.every(
+            (baseId) => "orcs" !== n.current[baseId]?.owner,
+          )
+        ) {
+          ((P.bossOpened = !0),
+            immersiveSound("magic"),
+            (battleFx.current.flash = 0.45),
+            et("Les trois runes sont brisées · Le bastion est vulnérable"));
         }
         if (
           ("seals" === L.mode &&
@@ -1641,18 +1804,48 @@ export default function Game() {
             !P.betrayalDone &&
             T.current >= (L.eventTime || 30))
         ) {
-          let e = n.current
-            .filter((e) => "humans" === e.owner && 0 !== e.id)
-            .sort((e, r) => r.units - e.units)[0];
+          let humanBases = n.current
+              .filter((e) => "humans" === e.owner)
+              .sort((e, r) => r.units - e.units),
+            e = humanBases.find((base) => 0 !== base.id),
+            wasHuman = Boolean(e),
+            joinedExistingOrcs = !1;
+          if (!e) {
+            e = n.current
+              .filter(
+                (base) =>
+                  base.owner === "neutral" &&
+                  base.id !== 0 &&
+                  !base.invulnerable &&
+                  !base.special,
+              )
+              .sort((left, right) => right.units - left.units)[0];
+            if (!e) {
+              e = n.current
+                .filter((base) => base.owner === "orcs" && !base.invulnerable)
+                .sort((left, right) => right.units - left.units)[0];
+              joinedExistingOrcs = Boolean(e);
+            }
+          }
           ((P.betrayalDone = !0),
+            (P.betrayedBaseId = e?.id ?? null),
             e &&
               ((e.owner = "orcs"),
-              (e.units = Math.max(16, e.units)),
-              (P.lostHumanBase = !0),
+              (e.construction = null),
+              (e.units = joinedExistingOrcs
+                ? Math.min(99, e.units + 16)
+                : Math.max(16, e.units)),
+              wasHuman && (P.lostHumanBase = !0),
               immersiveSound("betrayal"),
               impactFeedback(e.x, e.y, l.orcs.main, 1.5),
               navigator.vibrate?.([70, 35, 100]),
-              et("Trahison ! Une garnison se retourne")));
+              et(
+                joinedExistingOrcs
+                  ? "Trahison ! Des renforts rejoignent la Horde"
+                  : wasHuman
+                    ? "Trahison ! Une garnison se retourne"
+                    : "Trahison ! Une garnison cachée se révèle",
+              )));
         }
         if (
           ("dawn" === L.mode &&
@@ -1663,27 +1856,76 @@ export default function Game() {
             n.current
               .filter((e) => "humans" === e.owner)
               .reduce((e, r) => e + r.units, 0) >= (L.target || 120)
-              ? ((n.current[0].units += 80),
+              ? (() => {
+                let humanAnchor =
+                  n.current.find(
+                    (base) => base.id === 0 && base.owner === "humans",
+                  ) || n.current.find((base) => base.owner === "humans");
+                P.dawnReinforcement = "humans";
+                addReinforcements(
+                  n.current,
+                  "humans",
+                  80,
+                  humanAnchor?.id,
+                );
                 immersiveSound("magic"),
-                impactFeedback(n.current[0].x, n.current[0].y, l.humans.main, 1.4),
-                et("L’Armée de l’Aube est arrivée !"))
-              : ((n.current[1].units += 90),
+                impactFeedback(
+                  humanAnchor?.x || 0.06,
+                  humanAnchor?.y || 0.5,
+                  l.humans.main,
+                  1.4,
+                ),
+                et("L’Armée de l’Aube est arrivée !");
+              })()
+              : (() => {
+                let orcAnchor =
+                  n.current.find(
+                    (base) => base.id === 1 && base.owner === "orcs",
+                  ) || n.current.find((base) => base.owner === "orcs");
+                if (!orcAnchor) {
+                  orcAnchor = n.current[1];
+                  let previousOwner = orcAnchor.owner;
+                  orcAnchor.owner = "orcs";
+                  orcAnchor.construction = null;
+                  orcAnchor.units = 1;
+                  previousOwner === "humans" && (P.lostHumanBase = !0);
+                }
+                P.dawnReinforcement = "orcs";
+                addReinforcements(n.current, "orcs", 90, orcAnchor.id);
                 immersiveSound("wave"),
-                impactFeedback(n.current[1].x, n.current[1].y, l.orcs.main, 1.5),
-                et("La Horde déferle !"))),
+                impactFeedback(orcAnchor.x, orcAnchor.y, l.orcs.main, 1.5),
+                et("La Horde déferle !");
+              })()),
           "defense" === L.mode && T.current >= P.nextWave)
         ) {
-          for (let e of ((P.nextWave += 8),
+          let waveIntervals = [8, 7, 10],
+            waveUnits = [9, 14, 11],
+            waveRatios = [0.34, 0.56, 0.44],
+            waveIndex = P.waveCount % waveIntervals.length;
+          P.waveCount++;
+          P.nextWave += waveIntervals[waveIndex];
+          for (let e of (
           n.current.filter((e) => "source" === e.special))) {
-            e.units += 11;
+            e.units += waveUnits[waveIndex];
             let r = L.roads
               .filter(([r, t]) => r === e.id || t === e.id)
               .map(([r, t]) => (r === e.id ? t : r));
             r.length &&
-              ei(e.id, r[Math.floor(Math.random() * r.length)], "orcs", 0.45);
+              ei(
+                e.id,
+                r[(P.waveCount + e.id) % r.length],
+                "orcs",
+                waveRatios[waveIndex],
+              );
           }
           (immersiveSound("wave"), navigator.vibrate?.([45, 25, 45]));
-          et("Une nouvelle vague approche");
+            et(
+              waveIndex === 1
+                ? "Une vague massive approche"
+                : waveIndex === 2
+                  ? "La Horde change d’axe"
+                  : "Une nouvelle vague approche",
+            );
         }
         let mind = orcMind.current;
         if (L.id >= 2 && T.current >= mind.nextBuildAt) {
@@ -1700,7 +1942,7 @@ export default function Game() {
                 onFront = neighborIds.some(
                   (id) => n.current[id]?.owner === "humans",
                 ),
-                choiceId =
+                preferredChoiceId =
                   base.kind === "city"
                     ? onFront
                       ? "raise-fortress"
@@ -1718,18 +1960,33 @@ export default function Game() {
                         : onFront
                           ? "watchtower"
                           : "royal-relay",
-                choice = developmentById[choiceId];
+                options = getDevelopmentChoices(base, L.id),
+                choice =
+                  options.find((option) => option.id === preferredChoiceId) ||
+                  options[0],
+                incomingThreat = d.current
+                  .filter(
+                    (army) =>
+                      army.owner === "humans" && army.to === base.id,
+                  )
+                  .reduce((total, army) => total + army.units, 0);
               return {
                 base,
                 choice,
-                score: base.units + (onFront ? 8 : 0),
+                incomingThreat,
+                score: base.units + (onFront ? 8 : 0) - 1.6 * incomingThreat,
               };
             })
-            .filter(({ base, choice }) => base.units >= (choice?.cost || 99) + 6)
+            .filter(
+              ({ base, choice, incomingThreat }) =>
+                incomingThreat < 6 && base.units >= (choice?.cost || 99) + 6,
+            )
             .sort((left, right) => right.score - left.score);
           let project = buildCandidates[0];
-          if (project) {
-            startDevelopment(project.base.id, project.choice.id, "orcs");
+          if (
+            project &&
+            startDevelopment(project.base.id, project.choice.id, "orcs")
+          ) {
             et(`La Horde bâtit : ${project.choice.label}`);
           }
           mind.nextBuildAt = T.current + 11 + 4 * Math.random();
@@ -1807,7 +2064,7 @@ export default function Game() {
                     group.attack - defense +
                     9 * group.orders.length +
                     (group.target.kind === "fortress" ? 8 : 0) +
-                    (group.target.special ? 12 : 0) +
+                    getMissionObjectivePriority(L, group.target, P) +
                     (commandPower.current.buffBaseId === group.target.id &&
                     T.current < commandPower.current.buffUntil
                       ? 18
@@ -1876,7 +2133,7 @@ export default function Game() {
                     target,
                     score:
                       attack - defense +
-                      (target.special ? 18 : 0) +
+                      getMissionObjectivePriority(L, target, P) +
                       (target.kind === "village" ? 5 : 0),
                   });
               }
@@ -1924,6 +2181,11 @@ export default function Game() {
             else L.id >= 5 && et("Les éclaireurs orcs avancent");
           } else mind.nextThinkAt = T.current + 1.15;
         }
+        m.current = m.current.filter(
+          (route) =>
+            n.current[route.from]?.owner === route.owner &&
+            n.current[route.to]?.owner === route.owner,
+        );
         for (let e of m.current)
           ((e.clock += N),
             e.clock >= 3.2 && ((e.clock = 0), ei(e.from, e.to, e.owner, 0.25)));
@@ -2018,8 +2280,7 @@ export default function Game() {
                 age: 0,
               }),
               immersiveSound("saved"),
-              impactFeedback(t.x, t.y, l.humans.main, 0.7),
-              P.evacuated >= (L.target || 70) && ea("won"));
+              impactFeedback(t.x, t.y, l.humans.main, 0.7));
             continue;
           }
           if (t.invulnerable && t.owner !== r.owner) {
@@ -2046,15 +2307,24 @@ export default function Game() {
             let e = getBaseStats(t).defense;
             "boss" === L.mode &&
               "boss" === t.special &&
-              (e +=
-                0.18 *
-                (L.specialIds?.filter((e) => "orcs" === n.current[e].owner)
-                  .length || 0));
-            let s = r.units / e;
+              "orcs" === n.current[L.specialIds?.[1]]?.owner &&
+              (e += 0.45);
+            let s = r.units / e,
+              bossProtected =
+                "boss" === L.mode &&
+                "boss" === t.special &&
+                "orcs" === t.owner &&
+                L.specialIds?.some(
+                  (baseId) => "orcs" === n.current[baseId]?.owner,
+                );
             s > t.units
-              ? ((t.owner = r.owner),
-                (t.construction = null),
-                (t.units = Math.max(1, (s - t.units) * e)))
+              ? bossProtected
+                ? ((t.units = 1),
+                  "humans" === r.owner &&
+                    et("Les runes maintiennent le bastion debout"))
+                : ((t.owner = r.owner),
+                  (t.construction = null),
+                  (t.units = Math.max(1, (s - t.units) * e)))
               : (t.units -= s);
           }
           "humans" === s && "humans" !== t.owner && (P.lostHumanBase = !0);
@@ -2076,37 +2346,21 @@ export default function Game() {
               (er(780, 0.16, 0.05),
               gainCommand(22),
               et("Position capturée !"),
-              1 === L.id && X((e) => Math.min(2, e + 1))),
+              1 === L.id && 3 === t.id && X(2)),
             e.add(r.id));
         }
         for (let r of ((d.current = d.current.filter((r) => !e.has(r.id))),
         f.current))
           r.age += N;
-        if (
-          ((f.current = f.current.filter((e) => e.age < 0.9)),
-          "defense" === L.mode)
-        )
-          "humans" !== n.current[L.target || 0].owner
-            ? ea("lost")
-            : T.current >= (L.duration || 75) && ea("won");
-        else if ("boss" === L.mode && "orcs" !== n.current[L.target || 1].owner)
-          ea("won");
-        else if (!["escort", "evacuation", "relic"].includes(L.mode)) {
-          let e =
-              n.current.some((e) => "humans" === e.owner) ||
-              d.current.some((e) => "humans" === e.owner),
-            r =
-              n.current.some((e) => "orcs" === e.owner && !e.invulnerable) ||
-              d.current.some((e) => "orcs" === e.owner);
-          e
-            ? r || "seals" === L.mode
-              ? "seals" === L.mode &&
-                P.sealsOpened &&
-                "orcs" !== n.current[L.target || 1].owner &&
-                ea("won")
-              : ea("won")
-            : ea("lost");
-        }
+        f.current = f.current.filter((e) => e.age < 0.9);
+        let missionOutcome = evaluateMissionOutcome({
+          mission: L,
+          runtime: P,
+          bases: n.current,
+          armies: d.current,
+          elapsed: T.current,
+        });
+        missionOutcome && ea(missionOutcome);
         R.current > 0.25 &&
           ((R.current = 0),
           audioEngine.current?.setIntensity(
@@ -2883,7 +3137,7 @@ export default function Game() {
     return (
       (s = requestAnimationFrame(u)),
       () => {
-        (cancelAnimationFrame(s), o.disconnect());
+        (cancelAnimationFrame(s), window.clearTimeout(pauseTimer), o.disconnect());
       }
     );
   }, [
@@ -2894,7 +3148,10 @@ export default function Game() {
     er,
     gainCommand,
     immersiveSound,
+    E,
+    P,
     startDevelopment,
+    V,
   ]);
   let eu = (e) => {
       let r = e.currentTarget.getBoundingClientRect();
@@ -2907,14 +3164,16 @@ export default function Game() {
     },
     ec = (e, r, t, s) => {
       let battlefield = getBattlefieldLayout(t, s);
-      return n.current.find(
-        (n) =>
-          48 >
-          Math.hypot(
-            battlefield.left + n.x * battlefield.width - e,
-            battlefield.top + n.y * battlefield.height - r,
+      return n.current
+        .map((base) => ({
+          base,
+          distance: Math.hypot(
+            battlefield.left + base.x * battlefield.width - e,
+            battlefield.top + base.y * battlefield.height - r,
           ),
-      );
+        }))
+        .filter(({ distance }) => distance < 52)
+        .sort((left, right) => left.distance - right.distance)[0]?.base;
     },
     ed = (e) => {
       let r = x.current,
@@ -2931,6 +3190,9 @@ export default function Game() {
             base?.owner === "humans" &&
             !base.special &&
             !base.invulnerable &&
+            (base.construction ||
+              base.specialization ||
+              getDevelopmentChoices(base, h.current.id).length > 0) &&
             setBuildMenu(r);
           e.currentTarget.releasePointerCapture?.(e.pointerId);
           return;
@@ -2980,7 +3242,10 @@ export default function Game() {
     activeSpecialization = buildBase?.specialization
       ? developmentById[buildBase.specialization]
       : null,
-    totalCrowns = Object.values(_.crowns).reduce((e, r) => e + r, 0),
+    totalCrowns = Object.values(_.crowns).reduce(
+      (total, crowns) => total + countCrowns(crowns),
+      0,
+    ),
     campaignActs = [
       { id: "I", title: "Les armes du royaume", missions: s.slice(0, 5) },
       { id: "II", title: "La Horde déferle", missions: s.slice(5, 10) },
@@ -3039,7 +3304,8 @@ export default function Game() {
             children: [
               (0, r.jsx)("button", {
                 onClick: () => F((e) => !e),
-                "aria-label": "Son",
+                "aria-label": H ? "Réactiver le son" : "Couper le son",
+                "aria-pressed": H,
                 children: H ? "×" : "♪",
               }),
               (0, r.jsx)("button", {
@@ -3156,7 +3422,10 @@ export default function Game() {
                         (0, r.jsx)("button", {
                           className: "home-icon-button",
                           onClick: () => F((e) => !e),
-                          "aria-label": "Son",
+                          "aria-label": H
+                            ? "Réactiver le son"
+                            : "Couper le son",
+                          "aria-pressed": H,
                           children: H ? "SON COUPÉ" : "SON ACTIF",
                         }),
                       ],
@@ -3209,7 +3478,7 @@ export default function Game() {
                             className: "mission-track",
                             children: e.missions.map((e) => {
                               let t = e.id > _.unlocked,
-                                n = _.crowns[e.id] || 0;
+                                n = countCrowns(_.crowns[e.id]);
                               return (0, r.jsxs)(
                                 "button",
                                 {
@@ -3272,24 +3541,20 @@ export default function Game() {
                       (0, r.jsx)("h3", { children: selectedMission.objective }),
                       (0, r.jsxs)("div", {
                         className: "crown-conditions",
-                        children: [
-                          ["♛", "Remporter la bataille", !0],
-                          ["♛", `Terminer avant ${formatTime(selectedMission.par)}`, !1],
-                          ["♛", "Ne perdre aucune position", !1],
-                        ].map((e, t) =>
+                        children: getCrownDefinitions(selectedMission).map((e) =>
                           (0, r.jsxs)(
                             "span",
                             {
                               className:
-                                (_.crowns[selectedMission.id] || 0) > t
+                                _.crowns[selectedMission.id]?.[e.id]
                                   ? "earned"
                                   : "",
                               children: [
-                                (0, r.jsx)("b", { children: e[0] }),
-                                e[1],
+                                (0, r.jsx)("b", { children: "♛" }),
+                                e.label,
                               ],
                             },
-                            e[1],
+                            e.id,
                           ),
                         ),
                       }),
@@ -3297,7 +3562,7 @@ export default function Game() {
                         className: "primary-button",
                         onClick: () => launchMission(selectedMission),
                         children:
-                          (_.crowns[selectedMission.id] || 0) > 0
+                          countCrowns(_.crowns[selectedMission.id]) > 0
                             ? "Rejouer cette mission"
                             : "Partir au combat",
                       }),
@@ -3452,6 +3717,9 @@ export default function Game() {
                                           (0, r.jsx)("strong", {
                                             children: option.label,
                                           }),
+                                          (0, r.jsx)("small", {
+                                            children: option.description,
+                                          }),
                                         ],
                                       }),
                                       (0, r.jsx)("em", {
@@ -3485,18 +3753,21 @@ export default function Game() {
                         {
                           className: D === e ? "active" : "",
                           onClick: () => U(e),
+                          "aria-pressed": D === e,
                           children: 1 === e ? "TOUT" : 0.5 === e ? "½" : "¼",
                         },
                         e,
                       ),
                     ),
-                    (0, r.jsx)("button", {
-                      className: `supply-toggle ${$ ? "active" : ""}`,
-                      onClick: () => B((e) => !e),
-                      "aria-label": "Ravitaillement automatique",
-                      title: "Ravitaillement automatique",
-                      children: "↻",
-                    }),
+                    O >= 4 &&
+                      (0, r.jsx)("button", {
+                        className: `supply-toggle ${$ ? "active" : ""}`,
+                        onClick: () => B((e) => !e),
+                        "aria-label": "Ravitaillement automatique",
+                        "aria-pressed": $,
+                        title: "Ravitaillement automatique",
+                        children: "↻",
+                      }),
                   ],
                 }),
                 O >= 6 &&
@@ -3530,6 +3801,7 @@ export default function Game() {
                       }),
                       (0, r.jsxs)("button", {
                         onClick: beginPowerTargeting,
+                        "aria-pressed": commandUi.targeting,
                         disabled:
                           commandUi.charge < 100 && !commandUi.targeting,
                         "aria-label": "Bannière du Roi",
@@ -3550,7 +3822,14 @@ export default function Game() {
                     className: "tutorial-card",
                     children: [
                       (0, r.jsxs)("small", {
-                        children: ["LEÇON ", O, "/4"],
+                        children: [
+                          "LEÇON ",
+                          O,
+                          " · ",
+                          Q + 1,
+                          "/",
+                          c[O]?.length || 1,
+                        ],
                       }),
                       (0, r.jsx)("strong", { children: eh.title }),
                       (0, r.jsx)("p", { children: eh.text }),
@@ -3559,11 +3838,16 @@ export default function Game() {
                 G &&
                   (0, r.jsx)("div", {
                     className: "action-toast",
+                    role: "status",
+                    "aria-live": "polite",
                     children: G,
                   }),
                 "paused" === E &&
                   (0, r.jsx)("div", {
                     className: "modal-overlay",
+                    role: "dialog",
+                    "aria-modal": "true",
+                    "aria-label": "Bataille en pause",
                     children: (0, r.jsxs)("div", {
                       children: [
                         (0, r.jsx)("h2", { children: ef.name }),
@@ -3583,6 +3867,9 @@ export default function Game() {
                 ("won" === E || "lost" === E) &&
                   (0, r.jsx)("div", {
                     className: "modal-overlay result",
+                    role: "dialog",
+                    "aria-modal": "true",
+                    "aria-label": "Résultat de la bataille",
                     children: (0, r.jsxs)("div", {
                       className: `result-panel ${E}`,
                       children: [
@@ -3598,25 +3885,22 @@ export default function Game() {
                         }),
                         (0, r.jsx)("div", {
                           className: "result-crowns",
-                          children: [0, 1, 2].map((e) =>
+                          children: getCrownDefinitions(ef).map((crown) =>
                             (0, r.jsxs)(
                               "span",
                               {
                                 className:
-                                  (battleReport?.crowns || 0) > e ? "earned" : "",
+                                  battleReport?.crowns?.[crown.id]
+                                    ? "earned"
+                                    : "",
                                 children: [
                                   (0, r.jsx)("b", { children: "♛" }),
                                   (0, r.jsx)("small", {
-                                    children:
-                                      0 === e
-                                        ? "VICTOIRE"
-                                        : 1 === e
-                                          ? "RAPIDITÉ"
-                                          : "MAÎTRISE",
+                                    children: crown.shortLabel,
                                   }),
                                 ],
                               },
-                              e,
+                              crown.id,
                             ),
                           ),
                         }),
@@ -3686,11 +3970,15 @@ export default function Game() {
           V &&
             (0, r.jsx)("div", {
               className: "modal-overlay codex",
+              role: "dialog",
+              "aria-modal": "true",
+              "aria-label": "Codex du commandant",
               children: (0, r.jsxs)("div", {
                 children: [
                   (0, r.jsx)("button", {
                     className: "close",
                     onClick: () => W(!1),
+                    "aria-label": "Fermer le Codex",
                     children: "×",
                   }),
                   (0, r.jsx)("small", {

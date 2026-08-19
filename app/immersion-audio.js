@@ -15,6 +15,7 @@ export function createImmersionAudio() {
   let drone = [];
   let step = 0;
   let muted = false;
+  let paused = false;
   let intensity = 0.25;
   let theme = THEMES.plain;
 
@@ -109,7 +110,7 @@ export function createImmersionAudio() {
   };
 
   const scheduleMusic = () => {
-    if (muted || !context || context.state !== "running") return;
+    if (muted || paused || !context || context.state !== "running") return;
     const ratio = theme.notes[step % theme.notes.length];
     const accent = step % 4 === 0;
     oscillator(theme.root * ratio * 2, 0.42, 0.016 + intensity * 0.012, "triangle", music);
@@ -121,6 +122,7 @@ export function createImmersionAudio() {
     theme = THEMES[terrain] || THEMES.plain;
     if (["defense", "boss", "dawn"].includes(mode)) theme = { ...theme, tempo: Math.max(580, theme.tempo - 140) };
     step = 0;
+    paused = false;
     resume();
     clearInterval(timer);
     startDrone();
@@ -160,12 +162,29 @@ export function createImmersionAudio() {
       muted = value;
       if (!master || !context) return;
       master.gain.setTargetAtTime(value ? 0.0001 : 0.72, context.currentTime, 0.08);
-      if (!value) {
+      if (!value && !paused) {
         resume();
         if (!drone.length) startDrone();
       }
     },
+    pause() {
+      if (paused) return;
+      paused = true;
+      clearInterval(timer);
+      timer = undefined;
+      stopDrone();
+    },
+    resumeBattle() {
+      if (!paused) return;
+      paused = false;
+      resume();
+      startDrone();
+      clearInterval(timer);
+      scheduleMusic();
+      timer = window.setInterval(scheduleMusic, theme.tempo);
+    },
     stop() {
+      paused = false;
       clearInterval(timer);
       timer = undefined;
       stopDrone();
